@@ -393,15 +393,26 @@ app.get('*', (req, res) => {
 
 // Start server (only listen if run directly or not on Vercel serverless)
 if (!process.env.VERCEL) {
-  app.listen(PORT, '0.0.0.0', () => {
+  const primaryPort = PORT;
+  app.listen(primaryPort, '0.0.0.0', () => {
     console.log(`=======================================================`);
-    console.log(` HealthAids DocCam Server active on http://localhost:${PORT}`);
+    console.log(` HealthAids DocCam Server active on http://localhost:${primaryPort}`);
     console.log(` Theme Palette: #1eb8c9 (Cyan) & #1a4578 (Deep Navy)`);
     console.log(` Authorized Domain: @healthaids.in`);
     console.log(` Google Authentication: Enabled`);
     console.log(` Upload Directory: ${UPLOADS_DIR}`);
     console.log(`=======================================================`);
   });
+
+  // Also bind to 3030 for seamless access if user is on either port
+  if (primaryPort !== 3030) {
+    try {
+      const serverAlt = app.listen(3030, '0.0.0.0', () => {
+        console.log(` Also available on http://localhost:3030`);
+      });
+      serverAlt.on('error', () => {});
+    } catch (e) {}
+  }
 }
 
 module.exports = app;

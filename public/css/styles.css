@@ -289,148 +289,79 @@ body::after {
 }
 
 /* Auth Screen */
-.auth-wrapper {
-  margin: auto 0;
-  padding: 20px 0;
+/* Login Screen - Matriderm Sales Bot Architecture */
+#login-screen {
+  position: fixed;
+  inset: 0;
+  background-color: #070d17;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
 }
 
-.auth-card {
-  width: 100%;
+.login-box {
+  background: #0f1c30;
+  border: 1px solid rgba(30, 184, 201, 0.25);
+  padding: 2.5rem 2rem;
+  border-radius: 1.5rem;
   max-width: 440px;
-  background: var(--bg-card);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 34px 26px;
-  box-shadow: var(--shadow-lg);
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(30, 184, 201, 0.15);
   position: relative;
   overflow: hidden;
 }
 
-.auth-card::before {
+.login-box::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
+  height: 3px;
   background: var(--accent-gradient);
 }
 
-.auth-header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.auth-logo {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 16px;
-  background: var(--accent-gradient);
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-glow);
-}
-
-.auth-logo svg {
-  width: 32px;
-  height: 32px;
-  fill: white;
-}
-
-.auth-title {
-  font-family: var(--font-heading);
-  font-size: 1.55rem;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.auth-subtitle {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.auth-domain-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(30, 184, 201, 0.12);
-  border: 1px solid rgba(30, 184, 201, 0.35);
-  color: var(--brand-cyan-light);
-  padding: 5px 14px;
-  border-radius: var(--radius-full);
-  font-size: 0.78rem;
-  font-weight: 600;
-  margin-top: 10px;
-}
-
-.auth-alert {
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  font-size: 0.82rem;
-  margin-bottom: 18px;
-  display: none;
-  align-items: center;
-  gap: 8px;
-  line-height: 1.4;
-}
-
-.auth-alert.error {
-  display: flex;
-  background: var(--danger-bg);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
-}
-
-.auth-alert.success {
-  display: flex;
-  background: var(--success-bg);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #86efac;
-}
-
-/* Google Sign-in Section */
-.google-auth-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 22px;
-}
-
-.btn-google-signin {
-  width: 100%;
-  background: #ffffff;
-  color: #1f2937;
-  border: 1px solid #e5e7eb;
-  border-radius: var(--radius-md);
-  padding: 12px 18px;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
+.login-header-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 12px;
 }
 
-.btn-google-signin:hover {
-  background: #f9fafb;
-  box-shadow: 0 6px 18px rgba(30, 184, 201, 0.4);
-  transform: translateY(-1px);
+.login-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(30, 184, 201, 0.4);
+  border: 1px solid rgba(30, 184, 201, 0.4);
+  flex-shrink: 0;
 }
 
-.btn-google-signin:active {
-  transform: translateY(0);
+.login-app-title {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.login-instructions {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin-bottom: 2rem;
+}
+
+.login-error-text {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 1.25rem;
+  font-weight: 500;
 }
 
 .google-icon-svg {

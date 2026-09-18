@@ -31,9 +31,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // DOM Elements
   const appHeader = document.getElementById('app-header');
-  const authView = document.getElementById('auth-view');
+  const loginScreen = document.getElementById('login-screen') || document.getElementById('auth-view');
   const dashboardView = document.getElementById('dashboard-view');
-  const authAlert = document.getElementById('auth-alert');
+  const loginError = document.getElementById('login-error');
   const headerUserName = document.getElementById('header-user-name');
   const headerUserEmail = document.getElementById('header-user-email');
   const headerUserAvatar = document.getElementById('header-user-avatar');
@@ -280,8 +280,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Strict domain check: MUST be @healthaids.in
     if (!payload.email.toLowerCase().endsWith('@healthaids.in')) {
-      showAuthAlert(`Access Denied: Google Account (${payload.email}) is not authorized. You must sign in with your @healthaids.in account.`, 'error');
+      if (loginError) {
+        loginError.textContent = `Access Denied: (${payload.email}) is not an authorized @healthaids.in account.`;
+        loginError.style.display = 'block';
+      }
       return;
+    }
+
+    if (loginError) {
+      loginError.style.display = 'none';
     }
 
     let firstName = payload.given_name || '';
@@ -335,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentUser = null;
     appHeader.style.display = 'none';
     dashboardView.style.display = 'none';
-    authView.style.display = 'flex';
+    if (loginScreen) loginScreen.style.display = 'flex';
   }
 
   function setAuthenticatedUser(user) {
@@ -350,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
       headerUserAvatar.style.display = 'none';
     }
 
-    authView.style.display = 'none';
+    if (loginScreen) loginScreen.style.display = 'none';
     appHeader.style.display = 'flex';
     dashboardView.style.display = 'flex';
 

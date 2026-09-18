@@ -69,50 +69,34 @@
       <button class="btn-install-shortcut" id="btn-install-pwa">Install Shortcut</button>
     </div>
 
-    <!-- VIEW 1: AUTHENTICATION SCREEN -->
-    <div class="auth-wrapper" id="auth-view">
-      <div class="auth-card">
-        <div class="auth-header">
-          <div class="auth-logo">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-            </svg>
-          </div>
-          <h2 class="auth-title">HealthAids DocCam</h2>
-          <p class="auth-subtitle">Field Document & Verification System</p>
-          <div class="auth-domain-pill">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-            </svg>
-            Domain Locked: @healthaids.in only
-          </div>
+    <!-- LOGIN SCREEN (Google Authentication - Matriderm Sales Bot Architecture) -->
+    <div id="login-screen">
+      <div class="login-box">
+        <!-- App Icon & Title -->
+        <div class="login-header-row">
+          <img src="/icons/icon-192.png" alt="HealthAids DocCam" class="login-icon" />
+          <h1 class="login-app-title">HealthAids DocCam</h1>
         </div>
-
-        <div class="auth-alert" id="auth-alert"></div>
-
-        <!-- GOOGLE SIGN-IN CONTAINER (Strictly @healthaids.in) -->
-        <div class="google-auth-box">
-          <div id="g_id_onload"
-               data-client_id="553062227505-29cqks8fromv8i5n8u1p64busueap6m5.apps.googleusercontent.com"
-               data-context="signin"
-               data-ux_mode="popup"
-               data-callback="handleCredentialResponse"
-               data-hd="healthaids.in">
-          </div>
-          
-          <div class="g_id_signin flex justify-center" 
-               data-type="standard" 
-               data-theme="filled_black" 
-               data-size="large" 
-               data-text="sign_in_with"
-               data-shape="rectangular"
-               data-logo_alignment="left">
-          </div>
+        
+        <p class="login-instructions">Please sign in with your @healthaids.in account</p>
+        
+        <!-- Google Sign-In Button Container -->
+        <div id="g_id_onload"
+             data-client_id="553062227505-29cqks8fromv8i5n8u1p64busueap6m5.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleCredentialResponse"
+             data-hd="healthaids.in">
         </div>
-
-        <p class="auth-security-notice">
-          🔒 Secure Single Sign-On: Only authorized Google Workspace accounts with the <strong>@healthaids.in</strong> domain are permitted to access this application.
-        </p>
+        
+        <div class="g_id_signin flex justify-center" 
+             data-type="standard" 
+             data-theme="filled_black" 
+             data-size="large" 
+             data-text="sign_in_with">
+        </div>
+        
+        <p id="login-error" class="login-error-text" style="display: none;">Access Denied. You are not authorized to use this application.</p>
       </div>
     </div>
 
