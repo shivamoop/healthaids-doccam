@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="description" content="HealthAids Document & Photo Capture PWA. Restricted to @healthaids.in personnel." />
+  <meta name="theme-color" content="#1eb8c9" />
+  
+  <!-- Apple PWA Meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HealthAids" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" type="image/png" href="/icons/favicon.png" />
+
+  <title>HealthAids DocCam | Document Capture</title>
+  
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Top App Navigation Header -->
+    <header class="app-header" id="app-header" style="display: none;">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1>HealthAids</h1>
+          <span class="brand-badge">healthaids.in</span>
+        </div>
+      </div>
+
+      <div class="user-menu">
+        <img src="" class="user-avatar" id="header-user-avatar" alt="User Profile" />
+        <div class="user-chip">
+          <div class="user-name" id="header-user-name">User</div>
+          <div class="user-email-domain" id="header-user-email">@healthaids.in</div>
+        </div>
+        <button class="btn-icon" id="btn-logout" title="Log Out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- PWA Add to Home Screen Shortcut Banner -->
+    <div class="install-banner" id="pwa-install-banner" style="display: none;">
+      <div class="install-banner-text">
+        <div class="icon-box">📲</div>
+        <div>
+          <div class="install-banner-title">Add Shortcut to Home Screen</div>
+          <div class="install-banner-sub">Install for instant 1-tap camera access</div>
+        </div>
+      </div>
+      <button class="btn-install-shortcut" id="btn-install-pwa">Install Shortcut</button>
+    </div>
+
+    <!-- VIEW 1: AUTHENTICATION SCREEN -->
+    <div class="auth-wrapper" id="auth-view">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-logo">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+          </div>
+          <h2 class="auth-title">HealthAids DocCam</h2>
+          <p class="auth-subtitle">Field Document & Verification System</p>
+          <div class="auth-domain-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+            </svg>
+            Domain Locked: @healthaids.in only
+          </div>
+        </div>
+
+        <div class="auth-alert" id="auth-alert"></div>
+
+        <!-- GOOGLE SIGN-IN (From Matriderm Sales Bot with Client ID & Domain Lock) -->
+        <div class="google-auth-box">
+          <div id="g_id_onload"
+               data-client_id="553062227505-29cqks8fromv8i5n8u1p64busueap6m5.apps.googleusercontent.com"
+               data-context="signin"
+               data-ux_mode="popup"
+               data-callback="handleCredentialResponse"
+               data-hd="healthaids.in">
+          </div>
+          
+          <div class="g_id_signin flex justify-center" 
+               data-type="standard" 
+               data-theme="filled_black" 
+               data-size="large" 
+               data-text="sign_in_with"
+               data-shape="rectangular"
+               data-logo_alignment="left">
+          </div>
+        </div>
+
+        <div class="auth-divider">
+          <span>or sign in with HealthAids ID</span>
+        </div>
+
+        <!-- DIRECT HEALTHAIDS ID FORM -->
+        <form id="login-form">
+          <div class="form-group">
+            <label class="form-label" for="login-email">HealthAids Work Email (@healthaids.in)</label>
+            <input 
+              type="email" 
+              id="login-email" 
+              class="form-input" 
+              placeholder="username@healthaids.in" 
+              required 
+              autocomplete="email"
+            />
+          </div>
+
+          <div class="name-row">
+            <div class="form-group">
+              <label class="form-label" for="login-first-name">First Name</label>
+              <input 
+                type="text" 
+                id="login-first-name" 
+                class="form-input" 
+                placeholder="Rahul" 
+                required 
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="login-last-name">Last Name</label>
+              <input 
+                type="text" 
+                id="login-last-name" 
+                class="form-input" 
+                placeholder="Sharma" 
+                required 
+              />
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="btn-login-submit">
+            <span>Continue to DocCam</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </form>
+
+      </div>
+    </div>
+
+    <!-- VIEW 2: MAIN DASHBOARD -->
+    <main class="dashboard-view" id="dashboard-view" style="display: none;">
+      
+      <!-- Telemetry Cards (GPS Location & Device Specs) -->
+      <section class="telemetry-grid">
+        <!-- Location Telemetry -->
+        <div class="telemetry-card" id="card-location">
+          <div class="telemetry-header">
+            <span class="telemetry-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              GPS Location
+            </span>
+            <div class="telemetry-status-dot acquiring" id="loc-status-dot" title="Acquiring Location"></div>
+          </div>
+          <div class="telemetry-value-primary" id="loc-primary-text">Detecting GPS...</div>
+          <div class="telemetry-value-sub" id="loc-sub-text">Acquiring coordinates...</div>
+        </div>
+
+        <!-- Device Telemetry -->
+        <div class="telemetry-card" id="card-device">
+          <div class="telemetry-header">
+            <span class="telemetry-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              Device Details
+            </span>
+            <div class="telemetry-status-dot" title="Device Verified"></div>
+          </div>
+          <div class="telemetry-value-primary" id="dev-primary-text">Detecting...</div>
+          <div class="telemetry-value-sub" id="dev-sub-text">Screen & Browser</div>
+        </div>
+      </section>
+
+      <!-- PRIMARY CAMERA HERO ACTION -->
+      <section class="camera-action-card">
+        <!-- Automatic Document Naming Preview -->
+        <div class="naming-preview-tag" title="Target Upload Filename">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          <span id="auto-filename-preview">{first_last}_{date}.jpg</span>
+        </div>
+
+        <!-- Big Camera Trigger Button with #1a4578 / #1eb8c9 Theme -->
+        <button class="btn-capture-camera" id="btn-open-camera" aria-label="Open Camera to Capture Document">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+          </svg>
+        </button>
+
+        <h2 class="camera-action-title">Capture Document Photo</h2>
+        <p class="camera-action-desc">
+          Click the button above to open the camera, snap your document photo, and automatically upload it named with your full name and today's date.
+        </p>
+
+        <!-- Native file input fallback for restricted browsers -->
+        <input type="file" id="native-camera-input" accept="image/*" capture="environment" style="display: none;" />
+        <button type="button" class="file-fallback-btn" id="btn-file-fallback">
+          Choose from device / gallery fallback
+        </button>
+      </section>
+
+      <!-- RECENT UPLOADS & AUDIT LOG -->
+      <section class="history-section">
+        <div class="history-header">
+          <div class="history-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Uploaded Documents</span>
+          </div>
+          <span class="history-count" id="history-count-badge">0 files</span>
+        </div>
+
+        <div class="history-list" id="history-list-container">
+          <div class="empty-history">
+            No documents uploaded yet today. Click the camera button to snap your first document.
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- VIEW 3: FULLSCREEN LIVE CAMERA MODAL -->
+  <div class="camera-modal" id="camera-modal">
+    <!-- Camera Top Bar -->
+    <div class="camera-top-bar">
+      <button class="cam-ctl-btn" id="btn-close-camera" title="Close Camera">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+
+      <div class="brand-badge" style="background: rgba(0,0,0,0.6); color: var(--brand-cyan);">
+        <span>Document Scanner</span>
+      </div>
+
+      <button class="cam-ctl-btn" id="btn-switch-camera" title="Switch Front/Back Camera">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 10c0-4.418-3.582-8-8-8s-8 3.582-8 8c0 2.21 1.005 4.19 2.5 5.5"></path>
+          <path d="M4 14c0 4.418 3.582 8 8 8s8-3.582 8-8c0-2.21-1.005-4.19-2.5-5.5"></path>
+          <polyline points="20 4 20 10 14 10"></polyline>
+          <polyline points="4 20 4 14 10 14"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Live Viewport -->
+    <div class="camera-viewport">
+      <video id="camera-video" playsinline autoplay muted></video>
+      <canvas id="capture-canvas" style="display: none;"></canvas>
+
+      <!-- Viewfinder Overlay with Document Guidelines -->
+      <div class="viewfinder-overlay">
+        <div class="corner-tl"></div>
+        <div class="corner-tr"></div>
+        <div class="corner-bl"></div>
+        <div class="corner-br"></div>
+        <div class="viewfinder-guide-text">Align document within the frame</div>
+      </div>
+    </div>
+
+    <!-- Camera Bottom Bar (Shutter) -->
+    <div class="camera-bottom-bar">
+      <div style="width: 48px;"></div>
+      <button class="shutter-btn" id="btn-shutter" title="Take Photo">
+        <div class="shutter-btn-inner"></div>
+      </button>
+      <div style="width: 48px;"></div>
+    </div>
+  </div>
+
+  <!-- VIEW 4: SNAPSHOT REVIEW & UPLOAD MODAL -->
+  <div class="preview-modal" id="preview-modal">
+    <div class="preview-container">
+      <div class="preview-card">
+        <div class="preview-img-box">
+          <img id="preview-img" alt="Captured Document Preview" />
+        </div>
+        <div class="preview-details">
+          <div class="preview-filename-badge">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <span id="preview-filename-text">Rahul_Sharma_2026-09-18.jpg</span>
+          </div>
+
+          <div class="preview-telemetry-list">
+            <div class="preview-telemetry-item">
+              <span>📍 Location:</span>
+              <strong id="preview-loc-text">Detecting...</strong>
+            </div>
+            <div class="preview-telemetry-item">
+              <span>📱 Device:</span>
+              <strong id="preview-dev-text">Detecting...</strong>
+            </div>
+            <div class="preview-telemetry-item">
+              <span>👤 User:</span>
+              <strong id="preview-user-text">Rahul Sharma (rahul.sharma@healthaids.in)</strong>
+            </div>
+          </div>
+
+          <div class="upload-progress-box" id="upload-progress-box">
+            <div style="font-size: 0.82rem; font-weight: 600; color: var(--brand-cyan-light);" id="upload-status-label">Uploading document...</div>
+            <div class="upload-progress-bar-bg">
+              <div class="upload-progress-bar-fill" id="upload-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-actions">
+        <button class="btn-secondary" id="btn-retake-photo">Retake</button>
+        <button class="btn-primary" id="btn-confirm-upload">
+          <span>Upload Document</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEW 5: PWA SHORTCUT INSTRUCTIONS MODAL -->
+  <div class="modal-overlay" id="pwa-guide-modal">
+    <div class="modal-sheet">
+      <h3>Install HealthAids Shortcut</h3>
+      <p>Install this web app to your Home Screen for one-tap document scanning directly from your phone or desktop.</p>
+      
+      <div id="ios-instructions" style="display: none;">
+        <div class="instruction-step">
+          <div class="step-number">1</div>
+          <div>Tap the <strong>Share</strong> icon <span style="font-size: 1.1rem;">⎋</span> in Safari's bottom toolbar.</div>
+        </div>
+        <div class="instruction-step">
+          <div class="step-number">2</div>
+          <div>Scroll down and tap <strong>Add to Home Screen ⊞</strong>.</div>
+        </div>
+        <div class="instruction-step">
+          <div class="step-number">3</div>
+          <div>Tap <strong>Add</strong> in the top right corner.</div>
+        </div>
+      </div>
+
+      <div id="android-instructions" style="display: none;">
+        <div class="instruction-step">
+          <div class="step-number">1</div>
+          <div>Tap the <strong>Install Shortcut</strong> button below or your browser's menu (⋮).</div>
+        </div>
+        <div class="instruction-step">
+          <div class="step-number">2</div>
+          <div>Select <strong>Add to Home screen</strong> or <strong>Install App</strong>.</div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn-secondary" id="btn-close-pwa-guide">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

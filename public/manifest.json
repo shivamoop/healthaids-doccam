@@ -1,0 +1,36 @@
+{
+  "name": "HealthAids DocCam",
+  "short_name": "HealthAids",
+  "description": "Secure Document & Photo Capture for HealthAids.in personnel",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070d17",
+  "theme_color": "#1eb8c9",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Snap Document",
+      "short_name": "Capture",
+      "description": "Open camera immediately to capture a document",
+      "url": "/?action=capture",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "categories": ["medical", "productivity", "utilities"]
+}
