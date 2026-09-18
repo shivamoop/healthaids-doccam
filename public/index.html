@@ -18,6 +18,102 @@
 
   <title>HealthAids DocCam | Document Capture</title>
   
+  <!-- Origin check: Google Client ID requires http://localhost:8000 -->
+  <script>
+    if ((window.location.hostname === '127.0.0.1' || window.location.port === '3030') && window.location.protocol === 'http:') {
+      console.log('Redirecting to authorized Google OAuth origin http://localhost:8000');
+      window.location.replace('http://localhost:8000' + window.location.pathname + window.location.search);
+    }
+
+    function parseJwt(token) {
+      try {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        try {
+          return JSON.parse(window.atob(token.split('.')[1]));
+        } catch (e2) {
+          console.error('parseJwt decode error:', e, e2);
+          return null;
+        }
+      }
+    }
+
+    function handleCredentialResponse(response) {
+      console.log("Google response received:", response);
+      var errEl = document.getElementById('login-error');
+      
+      if (!response || !response.credential) {
+        if (errEl) {
+          errEl.textContent = 'Failed to receive credential from Google.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      var payload = parseJwt(response.credential);
+      console.log("Decoded Google payload:", payload);
+
+      if (!payload || !payload.email) {
+        if (errEl) {
+          errEl.textContent = 'Unable to decode Google account profile. Please try again.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      var email = (payload.email || '').toLowerCase().trim();
+      var isHealthAids = email.endsWith('@healthaids.in') || (payload.hd === 'healthaids.in');
+
+      if (!isHealthAids) {
+        if (errEl) {
+          errEl.textContent = 'Access Denied: (' + payload.email + ') is not an authorized @healthaids.in account.';
+          errEl.style.display = 'block';
+        }
+        return;
+      }
+
+      if (errEl) errEl.style.display = 'none';
+
+      var firstName = payload.given_name || '';
+      var lastName = payload.family_name || '';
+      var fullName = payload.name || (firstName + ' ' + lastName).trim();
+
+      if (!firstName || !lastName) {
+        var username = email.split('@')[0];
+        var parts = username.split(/[._-]/).filter(Boolean);
+        if (!firstName && parts.length > 0) firstName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+        if (!lastName && parts.length > 1) lastName = parts.slice(1).map(function(p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
+        if (!firstName) firstName = 'Staff';
+        if (!lastName) lastName = 'Member';
+      }
+
+      var userSession = {
+        id: 'usr_' + Date.now(),
+        email: email,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        fullName: (fullName || firstName + ' ' + lastName).trim(),
+        picture: payload.picture || '',
+        authProvider: 'google',
+        domain: 'healthaids.in',
+        loginTime: new Date().toISOString()
+      };
+
+      localStorage.setItem('healthaids_user', JSON.stringify(userSession));
+
+      if (window.onUserLoggedIn) {
+        window.onUserLoggedIn(userSession);
+      } else {
+        window.location.reload();
+      }
+    }
+  </script>
+
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 

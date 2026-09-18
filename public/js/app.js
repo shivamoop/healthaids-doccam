@@ -321,6 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setAuthenticatedUser(userSession);
   };
 
+  // Register window hook for head script auth callback
+  window.onUserLoggedIn = function(user) {
+    showToast(`Welcome, ${user.firstName}!`, 'success');
+    setAuthenticatedUser(user);
+  };
 
   function checkExistingSession() {
     const saved = localStorage.getItem('healthaids_user');
@@ -373,9 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function showAuthAlert(msg, type = 'error') {
-    authAlert.textContent = msg;
-    authAlert.className = `auth-alert ${type}`;
-    authAlert.style.display = 'flex';
+    if (loginError) {
+      loginError.textContent = msg;
+      loginError.style.display = 'block';
+    } else {
+      console.warn("Auth alert:", msg);
+    }
   }
 
   // ================= 4. AUTOMATIC FILENAME GENERATION =================
