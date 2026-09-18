@@ -445,30 +445,20 @@ body::after {
   justify-content: center;
 }
 
-.auth-divider {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  margin: 18px 0;
-  color: var(--text-dim);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.auth-security-notice {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: center;
+  background: rgba(26, 69, 120, 0.18);
+  border: 1px solid rgba(30, 184, 201, 0.2);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-top: 10px;
 }
 
-.auth-divider::before,
-.auth-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.auth-divider span {
-  padding: 0 10px;
-}
-
-.form-group {
-  margin-bottom: 16px;
+.auth-security-notice strong {
+  color: var(--brand-cyan-light);
 }
 
 .form-label {

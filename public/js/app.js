@@ -33,10 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const appHeader = document.getElementById('app-header');
   const authView = document.getElementById('auth-view');
   const dashboardView = document.getElementById('dashboard-view');
-  const loginForm = document.getElementById('login-form');
-  const loginEmail = document.getElementById('login-email');
-  const loginFirst = document.getElementById('login-first-name');
-  const loginLast = document.getElementById('login-last-name');
   const authAlert = document.getElementById('auth-alert');
   const headerUserName = document.getElementById('header-user-name');
   const headerUserEmail = document.getElementById('header-user-email');
@@ -318,52 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setAuthenticatedUser(userSession);
   };
 
-  // Handle Direct HealthAids ID Form Submit
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = loginEmail.value.trim();
-    const firstName = loginFirst.value.trim();
-    const lastName = loginLast.value.trim();
-
-    // Client-side strict check
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@healthaids\.in$/i;
-    if (!emailRegex.test(email)) {
-      showAuthAlert('Access Denied: Only @healthaids.in organizational accounts are authorized.', 'error');
-      return;
-    }
-
-    const btnSubmit = document.getElementById('btn-login-submit');
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span>Verifying...</span>';
-
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, firstName, lastName })
-      });
-
-      const data = await response.json();
-      if (response.ok && data.success) {
-        localStorage.setItem('healthaids_user', JSON.stringify(data.user));
-        showToast(`Welcome, ${data.user.firstName}!`, 'success');
-        setAuthenticatedUser(data.user);
-      } else {
-        showAuthAlert(data.message || 'Authentication failed. Please verify credentials.', 'error');
-      }
-    } catch (err) {
-      showAuthAlert('Unable to reach authentication server. Check connection.', 'error');
-    } finally {
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = `
-        <span>Continue to DocCam</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-          <polyline points="12 5 19 12 12 19"></polyline>
-        </svg>
-      `;
-    }
-  });
 
   function checkExistingSession() {
     const saved = localStorage.getItem('healthaids_user');

@@ -6,7 +6,7 @@ const cors = require('cors');
 const https = require('https');
 
 const app = express();
-const PORT = process.env.PORT || 3030;
+const PORT = process.env.PORT || 8000;
 
 // Directories (fallback to /tmp when running serverless on Vercel)
 const UPLOADS_DIR = process.env.VERCEL ? path.join('/tmp', 'uploads') : path.join(__dirname, 'uploads');
@@ -159,41 +159,36 @@ app.post('/api/auth/google', async (req, res) => {
   let fullName = '';
   let picture = '';
 
-  if (credential) {
-    // Attempt verification via Google's tokeninfo endpoint
-    try {
-      const googleUser = await verifyGoogleToken(credential);
-      email = (googleUser.email || '').toLowerCase().trim();
-      firstName = googleUser.given_name || '';
-      lastName = googleUser.family_name || '';
-      fullName = googleUser.name || `${firstName} ${lastName}`.trim();
-      picture = googleUser.picture || '';
-    } catch (err) {
-      // Fallback: decode JWT payload
-      const decoded = decodeJwtPayload(credential);
-      if (decoded && decoded.email) {
-        email = (decoded.email || '').toLowerCase().trim();
-        firstName = decoded.given_name || '';
-        lastName = decoded.family_name || '';
-        fullName = decoded.name || `${firstName} ${lastName}`.trim();
-        picture = decoded.picture || '';
-      } else {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid Google credential token.'
-        });
-      }
-    }
-  } else if (clientEmail) {
-    email = clientEmail.toLowerCase().trim();
-    firstName = clientFirstName || '';
-    lastName = clientLastName || '';
-    fullName = `${firstName} ${lastName}`.trim();
-  } else {
+  if (!credential) {
     return res.status(400).json({
       success: false,
-      message: 'Google authentication credentials are required.'
+      message: 'Google authentication credential is required.'
     });
+  }
+
+  // Attempt verification via Google's tokeninfo endpoint
+  try {
+    const googleUser = await verifyGoogleToken(credential);
+    email = (googleUser.email || '').toLowerCase().trim();
+    firstName = googleUser.given_name || '';
+    lastName = googleUser.family_name || '';
+    fullName = googleUser.name || `${firstName} ${lastName}`.trim();
+    picture = googleUser.picture || '';
+  } catch (err) {
+    // Fallback: decode JWT payload
+    const decoded = decodeJwtPayload(credential);
+    if (decoded && decoded.email) {
+      email = (decoded.email || '').toLowerCase().trim();
+      firstName = decoded.given_name || '';
+      lastName = decoded.family_name || '';
+      fullName = decoded.name || `${firstName} ${lastName}`.trim();
+      picture = decoded.picture || '';
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid Google credential token.'
+      });
+    }
   }
 
   // Strict domain enforcement: MUST be @healthaids.in
@@ -239,63 +234,7 @@ app.post('/api/auth/google', async (req, res) => {
   });
 });
 
-// 2. Direct @healthaids.in Fallback Login
-app.post('/api/auth/login', (req, res) => {
-  const { email, firstName, lastName } = req.body;
-
-  if (!email) {
-    return res.status(400).json({
-      success: false,
-      message: 'Email address is required.'
-    });
-  }
-
-  const cleanEmail = email.trim().toLowerCase();
-
-  // Strict enforcement check
-  if (!isValidHealthAidsEmail(cleanEmail)) {
-    return res.status(403).json({
-      success: false,
-      error: 'UNAUTHORIZED_DOMAIN',
-      message: 'Access Denied: Only verified @healthaids.in organizational IDs are authorized to access this application.'
-    });
-  }
-
-  // Derive first & last name if not explicitly passed
-  let resolvedFirstName = firstName ? firstName.trim() : '';
-  let resolvedLastName = lastName ? lastName.trim() : '';
-
-  if (!resolvedFirstName || !resolvedLastName) {
-    const usernamePart = cleanEmail.split('@')[0];
-    const parts = usernamePart.split(/[._-]/).filter(Boolean);
-    if (parts.length >= 2) {
-      resolvedFirstName = resolvedFirstName || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-      resolvedLastName = resolvedLastName || parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-    } else if (parts.length === 1) {
-      resolvedFirstName = resolvedFirstName || parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-      resolvedLastName = resolvedLastName || 'Doc';
-    }
-  }
-
-  const userSession = {
-    id: `usr_${Date.now()}`,
-    email: cleanEmail,
-    firstName: resolvedFirstName,
-    lastName: resolvedLastName,
-    fullName: `${resolvedFirstName} ${resolvedLastName}`.trim(),
-    authProvider: 'direct',
-    domain: 'healthaids.in',
-    loginTime: new Date().toISOString()
-  };
-
-  return res.json({
-    success: true,
-    message: 'Authentication successful. Welcome to HealthAids Portal.',
-    user: userSession
-  });
-});
-
-// 3. Upload Document Endpoint with Location & Device Details
+// 2. Upload Document Endpoint with Location & Device Details
 app.post('/api/upload', upload.single('documentPhoto'), (req, res) => {
   try {
     const file = req.file;
