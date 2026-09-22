@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
       deferredInstallPrompt.prompt();
       deferredInstallPrompt.userChoice.then((choice) => {
         if (choice.outcome === 'accepted') {
-          showToast('HealthAids shortcut installed to Home Screen!', 'success');
+          showToast('GRH DocCam shortcut installed to Home Screen!', 'success');
           pwaInstallBanner.style.display = 'none';
         }
         deferredInstallPrompt = null;
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getAutoFilename() {
-    if (!currentUser) return 'HealthAids_Doc.jpg';
+    if (!currentUser) return 'GRH_Doc.jpg';
     const first = sanitize(currentUser.firstName);
     const last = sanitize(currentUser.lastName);
     const dateStr = getTodayDateString();
@@ -723,7 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Display list of target filenames for each separate file
     if (previewFilenamesList) {
       previewFilenamesList.innerHTML = '';
-      const baseFirst = sanitize(currentUser ? currentUser.firstName : 'HealthAids');
+      const baseFirst = sanitize(currentUser ? currentUser.firstName : 'GRH');
       const baseLast = sanitize(currentUser ? currentUser.lastName : 'Doc');
       const dateStr = getTodayDateString();
 
