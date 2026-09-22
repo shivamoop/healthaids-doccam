@@ -1,6 +1,6 @@
 {
-  "name": "HealthAids DocCam",
-  "short_name": "HealthAids",
+  "name": "GRH DocCam",
+  "short_name": "GRH DocCam",
   "description": "Secure Document & Photo Capture for HealthAids.in personnel",
   "start_url": "/",
   "id": "/",

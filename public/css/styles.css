@@ -140,6 +140,15 @@ body::after {
   fill: white;
 }
 
+.brand-logo-img {
+  height: 38px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(30, 184, 201, 0.25));
+}
+
 .brand-info h1 {
   font-family: var(--font-heading);
   font-size: 1.18rem;
@@ -341,6 +350,16 @@ body::after {
   box-shadow: 0 4px 14px rgba(30, 184, 201, 0.4);
   border: 1px solid rgba(30, 184, 201, 0.4);
   flex-shrink: 0;
+}
+
+.login-logo-banner {
+  max-width: 220px;
+  height: auto;
+  max-height: 80px;
+  object-fit: contain;
+  margin: 0 auto 10px auto;
+  display: block;
+  filter: drop-shadow(0 4px 16px rgba(30, 184, 201, 0.35));
 }
 
 .login-app-title {
