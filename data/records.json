@@ -1,5 +1,63 @@
 [
   {
+    "id": "doc_1790072528253_ui0ah",
+    "filename": "Sam_HealthAids_2026-09-22_01.jpg",
+    "originalName": "past_doc.jpg",
+    "size": 5874,
+    "mimeType": "image/jpeg",
+    "fileUrl": "/uploads/Sam_HealthAids_2026-09-22_01.jpg",
+    "uploadedAt": "2026-09-22T10:22:08.254Z",
+    "user": {
+      "email": "sam.healthaids@healthaids.in",
+      "firstName": "Sam",
+      "lastName": "HealthAids",
+      "fullName": "Sam HealthAids"
+    },
+    "location": {
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "accuracy": null,
+      "address": "HealthAids HQ, New Delhi",
+      "timestamp": "2026-09-22T10:21:53.744Z"
+    },
+    "device": {},
+    "verification": {
+      "status": "PAST_EXPENSE",
+      "expenseDate": "2026-09-14",
+      "isToday": false,
+      "driveFileId": null
+    }
+  },
+  {
+    "id": "doc_1790072506261_r2hny",
+    "filename": "Sam_HealthAids_2026-09-22.jpg",
+    "originalName": "test_doc.jpg",
+    "size": 6438,
+    "mimeType": "image/jpeg",
+    "fileUrl": "/uploads/Sam_HealthAids_2026-09-22.jpg",
+    "uploadedAt": "2026-09-22T10:21:46.261Z",
+    "user": {
+      "email": "sam.healthaids@healthaids.in",
+      "firstName": "Sam",
+      "lastName": "HealthAids",
+      "fullName": "Sam HealthAids"
+    },
+    "location": {
+      "latitude": 28.6139,
+      "longitude": 77.209,
+      "accuracy": null,
+      "address": "HealthAids HQ, New Delhi",
+      "timestamp": "2026-09-22T10:21:41.792Z"
+    },
+    "device": {},
+    "verification": {
+      "status": "SUCCESS",
+      "expenseDate": "2026-09-22",
+      "isToday": true,
+      "driveFileId": "14qmJOAxk_p7EGW0EwE_LSOTDi3yiIlkl"
+    }
+  },
+  {
     "id": "doc_1790069959632_ycckp",
     "filename": "Shivam_Yadav_2026-09-22_02.jpg",
     "originalName": "test_page_3.jpg",

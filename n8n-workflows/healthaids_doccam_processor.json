@@ -1,0 +1,349 @@
+[
+  {
+    "id": "hAidsDocCam2026",
+    "name": "HealthAids DocCam Expense Processor",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "healthaids-doccam",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "webhook-doccam-entry",
+        "name": "DocCam Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          100
+        ],
+        "webhookId": "healthaids-doccam"
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.item;\nconst body = item.json.body || item.json;\n\nconst fileName = body.fileName || (\"document_\" + Date.now() + \".jpg\");\nconst fileBase64 = body.fileBase64 || \"\";\nconst mimeType = body.mimeType || \"image/jpeg\";\nconst userEmail = (body.email || \"user@healthaids.in\").trim().toLowerCase();\nconst firstName = body.firstName || \"Staff\";\nconst lastName = body.lastName || \"Member\";\nconst fullName = body.fullName || (firstName + \" \" + lastName).trim();\n\n// Clean base64 string\nlet cleanBase64 = fileBase64;\nif (cleanBase64.includes(\"base64,\")) {\n  cleanBase64 = cleanBase64.split(\"base64,\")[1];\n}\n\nconst promptText = \"You are an expert financial receipt, bill, and invoice date verification assistant for HealthAids.\\n\" +\n\"Carefully examine this document/receipt image to locate the expense/bill/transaction date.\\n\\n\" +\n\"Rules:\\n\" +\n\"1. Check if a transaction date, invoice date, bill date, or purchase date is clearly legible on this document.\\n\" +\n\"2. If found, format it strictly as YYYY-MM-DD (e.g. 2026-09-22).\\n\" +\n\"3. If no date is found, or if the text is unreadable, cut off, or illegible, set date_found to false and expense_date to null.\\n\" +\n\"4. Extract the total bill amount if visible.\\n\" +\n\"5. Extract vendor or store name if visible.\\n\\n\" +\n\"Return ONLY a valid JSON object matching this schema with NO markdown fences, no backticks:\\n\" +\n\"{\\n\" +\n\"  \\\"date_found\\\": true,\\n\" +\n\"  \\\"expense_date\\\": \\\"YYYY-MM-DD\\\",\\n\" +\n\"  \\\"total_amount\\\": \\\"...\\\",\\n\" +\n\"  \\\"vendor_name\\\": \\\"...\\\",\\n\" +\n\"  \\\"confidence\\\": \\\"high\\\",\\n\" +\n\"  \\\"reason\\\": \\\"...\\\"\\n\" +\n\"}\";\n\nreturn [{\n  json: {\n    fileName: fileName,\n    fileBase64: cleanBase64,\n    mimeType: mimeType,\n    userEmail: userEmail,\n    firstName: firstName,\n    lastName: lastName,\n    fullName: fullName,\n    location: body.location || null,\n    deviceInfo: body.deviceInfo || null,\n    prompt: promptText,\n    imageUrl: \"data:\" + mimeType + \";base64,\" + cleanBase64\n  }\n}];"
+        },
+        "id": "code-prepare-groq",
+        "name": "Prepare Groq Payload",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -160,
+          100
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.groq.com/openai/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{ $env.GROQ_API_KEY }}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\n  \"model\": \"qwen/qwen3.8-27b\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": {{ JSON.stringify($json.prompt) }}\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": {{ JSON.stringify($json.imageUrl) }}\n          }\n        }\n      ]\n    }\n  ],\n  \"response_format\": { \"type\": \"json_object\" },\n  \"max_tokens\": 512,\n  \"temperature\": 0.1\n}",
+          "options": {}
+        },
+        "id": "http-call-groq-vision",
+        "name": "Call Groq Vision",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          80,
+          100
+        ],
+        "retryOnFail": true,
+        "maxTries": 4,
+        "waitBetweenTries": 3000
+      },
+      {
+        "parameters": {
+          "jsCode": "const groqResponse = $input.item.json;\nconst originalData = $('Prepare Groq Payload').item.json;\n\nlet parsedAi = {};\ntry {\n  const content = groqResponse.choices[0].message.content;\n  parsedAi = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (e) {\n  try {\n    const raw = (groqResponse.choices && groqResponse.choices[0] && groqResponse.choices[0].message && groqResponse.choices[0].message.content) || '';\n    const match = raw.match(/\\{[\\s\\S]*\\}/);\n    if (match) parsedAi = JSON.parse(match[0]);\n  } catch (err) {}\n}\n\nlet dateFound = Boolean(parsedAi && parsedAi.date_found && parsedAi.expense_date);\nlet expenseDate = (parsedAi && parsedAi.expense_date) ? String(parsedAi.expense_date).trim() : null;\n\nif (expenseDate) {\n  // Normalize DD/MM/YYYY or DD-MM-YYYY to YYYY-MM-DD\n  const dmyMatch = expenseDate.match(/^(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})$/);\n  if (dmyMatch) {\n    expenseDate = dmyMatch[3] + '-' + dmyMatch[2].padStart(2, '0') + '-' + dmyMatch[1].padStart(2, '0');\n  }\n}\n\n// Current date in IST (Asia/Kolkata)\nconst now = new Date();\nconst todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });\n\nlet branchIndex = 0; // 0 = reupload, 1 = today, 2 = past\nlet status = 'REUPLOAD_REQUIRED';\nlet message = 'No date found in the receipt. Please re-upload the image properly with the date clearly visible.';\n\nif (!dateFound || !expenseDate || !/^\\d{4}-\\d{2}-\\d{2}$/.test(expenseDate)) {\n  branchIndex = 0;\n  status = 'REUPLOAD_REQUIRED';\n  message = 'No date found in the receipt. Please re-upload the image properly with the date clearly visible.';\n  dateFound = false;\n  expenseDate = null;\n} else if (expenseDate === todayStr) {\n  branchIndex = 1;\n  status = 'SUCCESS';\n  message = 'Your images has been succesfully uploaded';\n} else {\n  // Past expense (or date before today)\n  branchIndex = 2;\n  status = 'PAST_EXPENSE';\n  message = 'Your images has been succesfully uploaded';\n}\n\n// Convert base64 buffer to binary data for Google Drive\nconst binaryBuffer = Buffer.from(originalData.fileBase64, 'base64');\nconst binaryData = await this.helpers.prepareBinaryData(\n  binaryBuffer,\n  originalData.fileName,\n  originalData.mimeType\n);\n\nreturn [{\n  json: {\n    branchIndex: branchIndex,\n    status: status,\n    message: message,\n    todayDate: todayStr,\n    expenseDate: expenseDate,\n    dateFound: dateFound,\n    parsedAi: parsedAi,\n    fileName: originalData.fileName,\n    userEmail: originalData.userEmail,\n    fullName: originalData.fullName,\n    mimeType: originalData.mimeType\n  },\n  binary: {\n    data: binaryData\n  }\n}];"
+        },
+        "id": "code-evaluate-date",
+        "name": "Evaluate Date & Prepare File",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          320,
+          100
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "expression",
+          "output": "={{ $json.branchIndex }}",
+          "numberOutputs": 3
+        },
+        "id": "switch-route-by-date",
+        "name": "Route by Expense Date",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.2,
+        "position": [
+          560,
+          100
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"success\": false,\n  \"status\": \"REUPLOAD_REQUIRED\",\n  \"message\": {{ JSON.stringify($json.message) }},\n  \"dateFound\": false\n}",
+          "options": {
+            "responseCode": 422
+          }
+        },
+        "id": "webhook-respond-reupload",
+        "name": "Respond Reupload Required",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          840,
+          -100
+        ]
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "file",
+          "operation": "upload",
+          "inputDataFieldName": "data",
+          "name": "={{ $json.fileName }}",
+          "driveId": {
+            "mode": "list",
+            "value": "My Drive"
+          },
+          "folderId": {
+            "mode": "list",
+            "value": "root"
+          },
+          "options": {}
+        },
+        "id": "gdrive-upload-today",
+        "name": "Google Drive Upload (Today)",
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          840,
+          100
+        ],
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "9ShfEgfgrB9lm6hh",
+            "name": "Google Drive account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"success\": true,\n  \"status\": \"SUCCESS\",\n  \"message\": \"Your images has been succesfully uploaded\",\n  \"expenseDate\": {{ JSON.stringify($('Evaluate Date & Prepare File').item.json.expenseDate) }},\n  \"isToday\": true,\n  \"fileId\": {{ JSON.stringify($json.id) }}\n}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "webhook-respond-today",
+        "name": "Respond Today Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1100,
+          100
+        ]
+      },
+      {
+        "parameters": {
+          "authentication": "oAuth2",
+          "resource": "file",
+          "operation": "upload",
+          "inputDataFieldName": "data",
+          "name": "={{ $json.fileName }}",
+          "driveId": {
+            "mode": "list",
+            "value": "My Drive"
+          },
+          "folderId": {
+            "mode": "list",
+            "value": "root"
+          },
+          "options": {}
+        },
+        "id": "gdrive-upload-past",
+        "name": "Google Drive Upload (Past)",
+        "type": "n8n-nodes-base.googleDrive",
+        "typeVersion": 3,
+        "position": [
+          840,
+          300
+        ],
+        "credentials": {
+          "googleDriveOAuth2Api": {
+            "id": "9ShfEgfgrB9lm6hh",
+            "name": "Google Drive account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "sendTo": "={{ $('Evaluate Date & Prepare File').item.json.userEmail }}",
+          "subject": "={{ '⚠️ HealthAids Alert: Past Expense Image Uploaded (' + $('Evaluate Date & Prepare File').item.json.expenseDate + ')' }}",
+          "emailType": "text",
+          "message": "={{ 'Hello ' + $('Evaluate Date & Prepare File').item.json.fullName + ',\\n\\nNotice: The expense document you uploaded (' + $('Evaluate Date & Prepare File').item.json.fileName + ') has an expense date of ' + $('Evaluate Date & Prepare File').item.json.expenseDate + ', which is before today (' + $('Evaluate Date & Prepare File').item.json.todayDate + ').\\n\\nThe file has been saved to your Google Drive, but flagged as a past expense.\\n\\nThank you,\\nHealthAids Automated Expense System' }}",
+          "options": {
+            "appendAttribution": false
+          }
+        },
+        "id": "gmail-alert-past",
+        "name": "Gmail Alert to Agent",
+        "type": "n8n-nodes-base.gmail",
+        "typeVersion": 2.1,
+        "position": [
+          1080,
+          300
+        ],
+        "credentials": {
+          "gmailOAuth2": {
+            "id": "yixMNuepWQtzlJbH",
+            "name": "Gmail account 5"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"success\": true,\n  \"status\": \"PAST_EXPENSE\",\n  \"message\": \"Your images has been succesfully uploaded\",\n  \"expenseDate\": {{ JSON.stringify($('Evaluate Date & Prepare File').item.json.expenseDate) }},\n  \"isToday\": false,\n  \"alertSent\": true\n}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "webhook-respond-past",
+        "name": "Respond Past Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1320,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "DocCam Webhook": {
+        "main": [
+          [
+            {
+              "node": "Prepare Groq Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Groq Payload": {
+        "main": [
+          [
+            {
+              "node": "Call Groq Vision",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Call Groq Vision": {
+        "main": [
+          [
+            {
+              "node": "Evaluate Date & Prepare File",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluate Date & Prepare File": {
+        "main": [
+          [
+            {
+              "node": "Route by Expense Date",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Route by Expense Date": {
+        "main": [
+          [
+            {
+              "node": "Respond Reupload Required",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Google Drive Upload (Today)",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Google Drive Upload (Past)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Drive Upload (Today)": {
+        "main": [
+          [
+            {
+              "node": "Respond Today Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Drive Upload (Past)": {
+        "main": [
+          [
+            {
+              "node": "Gmail Alert to Agent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gmail Alert to Agent": {
+        "main": [
+          [
+            {
+              "node": "Respond Past Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "active": true
+  }
+]

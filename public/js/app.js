@@ -93,6 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const iosInstructions = document.getElementById('ios-instructions');
   const androidInstructions = document.getElementById('android-instructions');
 
+  // Re-upload Modal DOM (Receipt Date Required)
+  const reuploadModal = document.getElementById('reupload-modal');
+  const reuploadModalMsg = document.getElementById('reupload-modal-msg');
+  const btnReuploadRetake = document.getElementById('btn-reupload-retake');
+  const btnReuploadCancel = document.getElementById('btn-reupload-cancel');
+
   // Toast Container
   const toastContainer = document.getElementById('toast-container');
 
@@ -744,6 +750,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnConfirmUpload.addEventListener('click', performUpload);
 
+  function showReuploadModal(message) {
+    if (reuploadModalMsg) {
+      reuploadModalMsg.textContent = message || 'No date was found in the receipt image. Please re-upload the image properly with the date clearly visible.';
+    }
+    if (reuploadModal) {
+      reuploadModal.classList.add('active');
+    }
+    if (btnReuploadRetake) {
+      btnReuploadRetake.onclick = () => {
+        reuploadModal.classList.remove('active');
+        previewModal.classList.remove('active');
+        openCamera(false);
+      };
+    }
+    if (btnReuploadCancel) {
+      btnReuploadCancel.onclick = () => {
+        reuploadModal.classList.remove('active');
+      };
+    }
+  }
+
   async function performUpload() {
     if (capturedPhotos.length === 0 || !currentUser) {
       showToast('No live photos ready for upload.', 'error');
@@ -752,8 +779,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const totalPhotos = capturedPhotos.length;
     uploadProgressBox.style.display = 'block';
-    uploadProgressBar.style.width = '5%';
-    uploadStatusLabel.textContent = `Preparing ${totalPhotos} document uploads...`;
+    uploadProgressBar.style.width = '10%';
+    uploadStatusLabel.textContent = `Uploading and verifying ${totalPhotos} document(s)...`;
     btnConfirmUpload.disabled = true;
     if (btnAddPage) btnAddPage.disabled = true;
     btnRetakePhoto.disabled = true;
@@ -765,7 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const photoItem = capturedPhotos[i];
       const percent = Math.round(((i + 0.3) / totalPhotos) * 100);
       uploadProgressBar.style.width = `${percent}%`;
-      uploadStatusLabel.textContent = `Uploading document ${i + 1} of ${totalPhotos}...`;
+      uploadStatusLabel.textContent = `Verifying receipt date for document ${i + 1} of ${totalPhotos}...`;
 
       const formData = new FormData();
       formData.append('email', currentUser.email);
@@ -793,6 +820,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok && data.success) {
           uploadedRecords.push(data.record);
+        } else if (response.status === 422 || data.status === 'REUPLOAD_REQUIRED') {
+          hasError = true;
+          uploadProgressBox.style.display = 'none';
+          showReuploadModal(data.message);
+          break;
         } else {
           hasError = true;
           showToast(`Error uploading document ${i + 1}: ${data.message || 'Upload rejected'}`, 'error');
@@ -807,11 +839,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!hasError && uploadedRecords.length > 0) {
       uploadProgressBar.style.width = '100%';
-      uploadStatusLabel.textContent = `All ${uploadedRecords.length} Separate Documents Uploaded!`;
+      uploadStatusLabel.textContent = 'Your images has been succesfully uploaded';
 
       setTimeout(() => {
         previewModal.classList.remove('active');
-        showToast(`Successfully uploaded ${uploadedRecords.length} separate documents!`, 'success');
+        showToast('Your images has been succesfully uploaded', 'success');
         capturedPhotos.forEach(p => URL.revokeObjectURL(p.dataUrl));
         capturedPhotos = [];
         loadUploadHistory();

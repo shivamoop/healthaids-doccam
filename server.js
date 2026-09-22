@@ -234,8 +234,35 @@ app.post('/api/auth/google', async (req, res) => {
   });
 });
 
+// Helper to forward document image to n8n workflow for AI date verification & Drive upload
+async function forwardToN8n(payload) {
+  const n8nUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/healthaids-doccam';
+  try {
+    const res = await fetch(n8nUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(35000)
+    });
+
+    const data = await res.json().catch(() => ({}));
+    return {
+      ok: res.ok,
+      status: res.status,
+      data: data
+    };
+  } catch (err) {
+    console.warn('n8n forwarding warning:', err.message);
+    return {
+      ok: false,
+      status: 503,
+      error: err.message
+    };
+  }
+}
+
 // 2. Upload Document Endpoint with Location & Device Details
-app.post('/api/upload', upload.single('documentPhoto'), (req, res) => {
+app.post('/api/upload', upload.single('documentPhoto'), async (req, res) => {
   try {
     const file = req.file;
     if (!file) {
@@ -296,6 +323,42 @@ app.post('/api/upload', upload.single('documentPhoto'), (req, res) => {
       }
     }
 
+    const locationObj = {
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      accuracy: accuracy ? parseFloat(accuracy) : null,
+      address: locationAddress || 'GPS Location Tagged',
+      timestamp: locationTimestamp || new Date().toISOString()
+    };
+
+    // Forward image to n8n automated workflow for AI date verification & Drive upload
+    const n8nPayload = {
+      fileName: filename,
+      fileBase64: file.buffer.toString('base64'),
+      mimeType: file.mimetype || 'image/jpeg',
+      email: email.trim().toLowerCase(),
+      firstName: resolvedFirst,
+      lastName: resolvedLast,
+      fullName: `${resolvedFirst} ${resolvedLast}`.trim(),
+      location: locationObj,
+      deviceInfo: parsedDeviceInfo
+    };
+
+    const n8nResult = await forwardToN8n(n8nPayload);
+
+    // If n8n detected that NO date was found on the receipt image, require re-upload
+    if (n8nResult.status === 422 || n8nResult.data?.status === 'REUPLOAD_REQUIRED') {
+      try {
+        if (fs.existsSync(targetFilePath)) fs.unlinkSync(targetFilePath);
+      } catch (e) {}
+      return res.status(422).json({
+        success: false,
+        status: 'REUPLOAD_REQUIRED',
+        message: n8nResult.data?.message || 'No date found in the receipt. Please re-upload the image properly with the date clearly visible.',
+        filename: filename
+      });
+    }
+
     const record = {
       id: `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       filename: filename,
@@ -310,14 +373,14 @@ app.post('/api/upload', upload.single('documentPhoto'), (req, res) => {
         lastName: resolvedLast,
         fullName: `${resolvedFirst} ${resolvedLast}`.trim()
       },
-      location: {
-        latitude: latitude ? parseFloat(latitude) : null,
-        longitude: longitude ? parseFloat(longitude) : null,
-        accuracy: accuracy ? parseFloat(accuracy) : null,
-        address: locationAddress || 'GPS Location Tagged',
-        timestamp: locationTimestamp || new Date().toISOString()
-      },
-      device: parsedDeviceInfo
+      location: locationObj,
+      device: parsedDeviceInfo,
+      verification: {
+        status: n8nResult.data?.status || 'SUCCESS',
+        expenseDate: n8nResult.data?.expenseDate || null,
+        isToday: n8nResult.data?.isToday ?? true,
+        driveFileId: n8nResult.data?.fileId || null
+      }
     };
 
     // Save to records database
@@ -325,9 +388,10 @@ app.post('/api/upload', upload.single('documentPhoto'), (req, res) => {
     records.unshift(record);
     saveRecords(records);
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: `Document successfully uploaded as "${filename}"`,
+      status: n8nResult.data?.status || 'SUCCESS',
+      message: 'Your images has been succesfully uploaded',
       record: record
     });
   } catch (err) {
