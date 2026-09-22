@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentUser = null;
   let activeStream = null;
   let currentFacingMode = 'environment'; // default rear camera
-  let capturedBlob = null;
+  let capturedPhotos = []; // Array of { blob: Blob, dataUrl: string, id: string }
+  let activePreviewIndex = 0;
   let deferredInstallPrompt = null;
 
   // Cached Telemetry
@@ -49,8 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Camera & Action DOM
   const btnOpenCamera = document.getElementById('btn-open-camera');
   const autoFilenamePreview = document.getElementById('auto-filename-preview');
-  const nativeCameraInput = document.getElementById('native-camera-input');
-  const btnFileFallback = document.getElementById('btn-file-fallback');
 
   // Camera Modal DOM
   const cameraModal = document.getElementById('camera-modal');
@@ -59,16 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCloseCamera = document.getElementById('btn-close-camera');
   const btnSwitchCamera = document.getElementById('btn-switch-camera');
   const btnShutter = document.getElementById('btn-shutter');
+  const camCounterText = document.getElementById('cam-counter-text');
+  const camThumbDock = document.getElementById('cam-thumb-dock');
+  const btnCamDone = document.getElementById('btn-cam-done');
+  const camDoneCount = document.getElementById('cam-done-count');
 
   // Preview Modal DOM
   const previewModal = document.getElementById('preview-modal');
+  const previewThumbBar = document.getElementById('preview-thumb-bar');
   const previewImg = document.getElementById('preview-img');
-  const previewFilenameText = document.getElementById('preview-filename-text');
+  const previewActivePagePill = document.getElementById('preview-active-page-pill');
+  const previewFilenamesList = document.getElementById('preview-filenames-list');
   const previewLocText = document.getElementById('preview-loc-text');
   const previewDevText = document.getElementById('preview-dev-text');
   const previewUserText = document.getElementById('preview-user-text');
+  const btnAddPage = document.getElementById('btn-add-page');
   const btnRetakePhoto = document.getElementById('btn-retake-photo');
   const btnConfirmUpload = document.getElementById('btn-confirm-upload');
+  const uploadBtnLabel = document.getElementById('upload-btn-label');
   const uploadProgressBox = document.getElementById('upload-progress-box');
   const uploadProgressBar = document.getElementById('upload-progress-bar');
   const uploadStatusLabel = document.getElementById('upload-status-label');
@@ -413,26 +420,31 @@ document.addEventListener('DOMContentLoaded', () => {
     autoFilenamePreview.textContent = fn;
   }
 
-  // ================= 5. CAMERA STREAM & CAPTURE =================
-  btnOpenCamera.addEventListener('click', openCamera);
-  btnFileFallback.addEventListener('click', () => nativeCameraInput.click());
-  nativeCameraInput.addEventListener('change', handleNativeFileCapture);
+  // ================= 5. LIVE CAMERA STREAM & MULTI-PHOTO CAPTURE =================
+  btnOpenCamera.addEventListener('click', () => {
+    capturedPhotos = [];
+    openCamera(false);
+  });
 
-  async function openCamera() {
+  async function openCamera(appendMode = false) {
+    if (!appendMode) {
+      // Starting a fresh capture session
+      capturedPhotos = [];
+    }
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showToast('Camera API unavailable. Opening device photo capture.', 'error');
-      nativeCameraInput.click();
+      showToast('Camera API unavailable. Live camera required to capture documents.', 'error');
       return;
     }
 
     try {
       cameraModal.classList.add('active');
+      updateCamUI();
       await startStream(currentFacingMode);
     } catch (err) {
       console.error('Camera stream error:', err);
       closeCameraModal();
-      showToast('Camera access denied or unavailable. Opening device file chooser.', 'error');
-      nativeCameraInput.click();
+      showToast('Camera access denied. Please grant camera permission to scan documents.', 'error');
     }
   }
 
@@ -463,7 +475,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cameraModal.classList.remove('active');
   }
 
-  btnCloseCamera.addEventListener('click', closeCameraModal);
+  btnCloseCamera.addEventListener('click', () => {
+    closeCameraModal();
+    if (capturedPhotos.length > 0) {
+      showPreviewModal();
+    }
+  });
 
   // Flip between rear & front camera
   btnSwitchCamera.addEventListener('click', async () => {
@@ -475,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Snap Photo Button Click
+  // Shutter Trigger: Snap Live Photo
   btnShutter.addEventListener('click', () => {
     playShutterFeedback();
     takeSnapshot();
@@ -502,6 +519,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function takeSnapshot() {
+    if (capturedPhotos.length >= 3) {
+      showToast('Maximum 3 photos reached. Tap Done to review.', 'info');
+      return;
+    }
+
     const videoWidth = cameraVideo.videoWidth || 1280;
     const videoHeight = cameraVideo.videoHeight || 720;
 
@@ -512,32 +534,166 @@ document.addEventListener('DOMContentLoaded', () => {
 
     captureCanvas.toBlob((blob) => {
       if (!blob) {
-        showToast('Failed to capture snapshot.', 'error');
+        showToast('Failed to capture live photo.', 'error');
         return;
       }
-      capturedBlob = blob;
-      closeCameraModal();
-      showPreviewModal(blob);
+
+      const dataUrl = URL.createObjectURL(blob);
+      capturedPhotos.push({
+        blob: blob,
+        dataUrl: dataUrl,
+        id: `page_${Date.now()}_${capturedPhotos.length + 1}`
+      });
+
+      updateCamUI();
+
+      if (capturedPhotos.length === 3) {
+        showToast('All 3 pages captured! Opening review...', 'success');
+        setTimeout(() => {
+          closeCameraModal();
+          showPreviewModal();
+        }, 350);
+      } else {
+        showToast(`Captured Page ${capturedPhotos.length} of 3. Snap next or click Done.`, 'success');
+      }
     }, 'image/jpeg', 0.92);
   }
 
-  function handleNativeFileCapture(e) {
-    const file = e.target.files[0];
-    if (file) {
-      capturedBlob = file;
-      showPreviewModal(file);
+  function updateCamUI() {
+    const count = capturedPhotos.length;
+    if (camCounterText) {
+      camCounterText.textContent = `Live Scanner · ${count} of 3`;
     }
-    nativeCameraInput.value = '';
+
+    if (btnCamDone) {
+      if (count > 0) {
+        btnCamDone.style.display = 'flex';
+        if (camDoneCount) camDoneCount.textContent = count;
+      } else {
+        btnCamDone.style.display = 'none';
+      }
+    }
+
+    // Render thumbnails in camera dock
+    if (camThumbDock) {
+      camThumbDock.innerHTML = '';
+      capturedPhotos.forEach((item, idx) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'cam-thumb-item';
+        thumb.title = `Page ${idx + 1}`;
+        thumb.innerHTML = `
+          <img src="${item.dataUrl}" alt="Page ${idx + 1}" />
+          <div class="cam-thumb-del" data-index="${idx}" title="Remove Page ${idx + 1}">✕</div>
+        `;
+        thumb.querySelector('.cam-thumb-del').addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeCapturedPhoto(idx);
+        });
+        camThumbDock.appendChild(thumb);
+      });
+    }
+
+    // Shutter state
+    if (count >= 3) {
+      btnShutter.style.opacity = '0.5';
+      btnShutter.style.pointerEvents = 'none';
+    } else {
+      btnShutter.style.opacity = '1';
+      btnShutter.style.pointerEvents = 'auto';
+    }
   }
 
-  // ================= 6. SNAPSHOT REVIEW & UPLOAD =================
-  function showPreviewModal(blob) {
-    const url = URL.createObjectURL(blob);
-    previewImg.src = url;
+  function removeCapturedPhoto(idx) {
+    if (idx >= 0 && idx < capturedPhotos.length) {
+      URL.revokeObjectURL(capturedPhotos[idx].dataUrl);
+      capturedPhotos.splice(idx, 1);
+      updateCamUI();
+      showToast(`Page removed. ${capturedPhotos.length} of 3 remain.`, 'info');
+    }
+  }
 
-    const filename = getAutoFilename();
-    previewFilenameText.textContent = filename;
+  // Done button in camera bottom bar
+  if (btnCamDone) {
+    btnCamDone.addEventListener('click', () => {
+      if (capturedPhotos.length === 0) {
+        showToast('Please snap at least 1 document photo.', 'error');
+        return;
+      }
+      closeCameraModal();
+      showPreviewModal();
+    });
+  }
 
+  // ================= 6. MULTI-SNAPSHOT REVIEW & UPLOAD =================
+  function showPreviewModal() {
+    if (capturedPhotos.length === 0) return;
+    activePreviewIndex = 0;
+    renderPreviewScreen();
+    previewModal.classList.add('active');
+  }
+
+  function renderPreviewScreen() {
+    if (capturedPhotos.length === 0) {
+      previewModal.classList.remove('active');
+      return;
+    }
+
+    if (activePreviewIndex >= capturedPhotos.length) {
+      activePreviewIndex = capturedPhotos.length - 1;
+    }
+
+    const current = capturedPhotos[activePreviewIndex];
+    if (!current) return;
+
+    previewImg.src = current.dataUrl;
+    if (previewActivePagePill) {
+      previewActivePagePill.textContent = `Page ${activePreviewIndex + 1} of ${capturedPhotos.length}`;
+    }
+
+    // Multi-page selector tabs
+    if (previewThumbBar) {
+      if (capturedPhotos.length > 1) {
+        previewThumbBar.style.display = 'flex';
+        previewThumbBar.innerHTML = '';
+        capturedPhotos.forEach((item, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `multi-thumb-btn ${idx === activePreviewIndex ? 'active' : ''}`;
+          btn.innerHTML = `
+            <img src="${item.dataUrl}" alt="Page ${idx + 1}" />
+            <span>Page ${idx + 1}</span>
+          `;
+          btn.addEventListener('click', () => {
+            activePreviewIndex = idx;
+            renderPreviewScreen();
+          });
+          previewThumbBar.appendChild(btn);
+        });
+      } else {
+        previewThumbBar.style.display = 'none';
+      }
+    }
+
+    // Display list of target filenames for each separate file
+    if (previewFilenamesList) {
+      previewFilenamesList.innerHTML = '';
+      const baseFirst = sanitize(currentUser ? currentUser.firstName : 'HealthAids');
+      const baseLast = sanitize(currentUser ? currentUser.lastName : 'Doc');
+      const dateStr = getTodayDateString();
+
+      capturedPhotos.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.gap = '6px';
+        const counterSuffix = idx === 0 ? '' : `_${String(idx).padStart(2, '0')}`;
+        const fname = `${baseFirst}_${baseLast}_${dateStr}${counterSuffix}.jpg`;
+        row.innerHTML = `<span style="color: var(--brand-cyan); font-weight: 700;">#${idx + 1}:</span> <span>${fname}</span>`;
+        previewFilenamesList.appendChild(row);
+      });
+    }
+
+    // Telemetry information
     previewLocText.textContent = locationData.latitude 
       ? `${locationData.address} (±${locationData.accuracy || 10}m)`
       : 'Tagging live GPS coordinates...';
@@ -545,90 +701,126 @@ document.addEventListener('DOMContentLoaded', () => {
     previewDevText.textContent = `${deviceDetails.os} · ${deviceDetails.browser} (${deviceDetails.screen})`;
     previewUserText.textContent = `${currentUser.fullName} (${currentUser.email})`;
 
+    // "Add Page" button visibility (available if < 3 photos)
+    if (btnAddPage) {
+      if (capturedPhotos.length < 3) {
+        btnAddPage.style.display = 'flex';
+        const span = btnAddPage.querySelector('span');
+        if (span) span.textContent = `➕ Add Page (${capturedPhotos.length}/3)`;
+      } else {
+        btnAddPage.style.display = 'none';
+      }
+    }
+
+    // Upload button text
+    if (uploadBtnLabel) {
+      const count = capturedPhotos.length;
+      uploadBtnLabel.textContent = `Upload ${count} ${count > 1 ? 'Separate Documents' : 'Document'}`;
+    }
+
     uploadProgressBox.style.display = 'none';
     uploadProgressBar.style.width = '0%';
     btnConfirmUpload.disabled = false;
-    btnConfirmUpload.innerHTML = `
-      <span>Upload Document</span>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <polyline points="17 8 12 3 7 8"></polyline>
-        <line x1="12" y1="3" x2="12" y2="15"></line>
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-      </svg>
-    `;
-
-    previewModal.classList.add('active');
   }
 
+  // Add another page button
+  if (btnAddPage) {
+    btnAddPage.addEventListener('click', () => {
+      previewModal.classList.remove('active');
+      openCamera(true); // appendMode = true (keeps existing photos)
+    });
+  }
+
+  // Retake button (resets and re-opens live camera)
   btnRetakePhoto.addEventListener('click', () => {
     previewModal.classList.remove('active');
-    capturedBlob = null;
-    openCamera();
+    capturedPhotos.forEach(p => URL.revokeObjectURL(p.dataUrl));
+    capturedPhotos = [];
+    openCamera(false);
   });
 
   btnConfirmUpload.addEventListener('click', performUpload);
 
   async function performUpload() {
-    if (!capturedBlob || !currentUser) {
-      showToast('No photo ready for upload.', 'error');
+    if (capturedPhotos.length === 0 || !currentUser) {
+      showToast('No live photos ready for upload.', 'error');
       return;
     }
 
-    const filename = getAutoFilename();
-    const formData = new FormData();
+    const totalPhotos = capturedPhotos.length;
+    uploadProgressBox.style.display = 'block';
+    uploadProgressBar.style.width = '5%';
+    uploadStatusLabel.textContent = `Preparing ${totalPhotos} document uploads...`;
+    btnConfirmUpload.disabled = true;
+    if (btnAddPage) btnAddPage.disabled = true;
+    btnRetakePhoto.disabled = true;
 
-    // CRITICAL: Append metadata fields FIRST so any streaming multipart parser gets user details before processing file!
-    formData.append('email', currentUser.email);
-    formData.append('firstName', currentUser.firstName);
-    formData.append('lastName', currentUser.lastName);
+    const uploadedRecords = [];
+    let hasError = false;
 
-    if (locationData.latitude) {
-      formData.append('latitude', locationData.latitude);
-      formData.append('longitude', locationData.longitude);
-      formData.append('accuracy', locationData.accuracy);
-      formData.append('locationAddress', locationData.address);
-      formData.append('locationTimestamp', locationData.timestamp || new Date().toISOString());
+    for (let i = 0; i < totalPhotos; i++) {
+      const photoItem = capturedPhotos[i];
+      const percent = Math.round(((i + 0.3) / totalPhotos) * 100);
+      uploadProgressBar.style.width = `${percent}%`;
+      uploadStatusLabel.textContent = `Uploading document ${i + 1} of ${totalPhotos}...`;
+
+      const formData = new FormData();
+      formData.append('email', currentUser.email);
+      formData.append('firstName', currentUser.firstName);
+      formData.append('lastName', currentUser.lastName);
+
+      if (locationData.latitude) {
+        formData.append('latitude', locationData.latitude);
+        formData.append('longitude', locationData.longitude);
+        formData.append('accuracy', locationData.accuracy);
+        formData.append('locationAddress', locationData.address);
+        formData.append('locationTimestamp', locationData.timestamp || new Date().toISOString());
+      }
+
+      formData.append('deviceInfo', JSON.stringify(deviceDetails));
+      formData.append('documentPhoto', photoItem.blob, `live_capture_${i + 1}.jpg`);
+
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          uploadedRecords.push(data.record);
+        } else {
+          hasError = true;
+          showToast(`Error uploading document ${i + 1}: ${data.message || 'Upload rejected'}`, 'error');
+          break;
+        }
+      } catch (err) {
+        hasError = true;
+        showToast(`Network error on document ${i + 1}: ${err.message}`, 'error');
+        break;
+      }
     }
 
-    formData.append('deviceInfo', JSON.stringify(deviceDetails));
-    
-    // Append binary file with calculated filename
-    formData.append('documentPhoto', capturedBlob, filename);
+    if (!hasError && uploadedRecords.length > 0) {
+      uploadProgressBar.style.width = '100%';
+      uploadStatusLabel.textContent = `All ${uploadedRecords.length} Separate Documents Uploaded!`;
 
-    // Progress animation UI
-    uploadProgressBox.style.display = 'block';
-    uploadProgressBar.style.width = '35%';
-    uploadStatusLabel.textContent = `Uploading ${filename}...`;
-    btnConfirmUpload.disabled = true;
-
-    try {
-      setTimeout(() => { uploadProgressBar.style.width = '75%'; }, 300);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        uploadProgressBar.style.width = '100%';
-        uploadStatusLabel.textContent = 'Upload Complete!';
-        
-        setTimeout(() => {
-          previewModal.classList.remove('active');
-          showToast(`Document uploaded: ${data.record.filename}`, 'success');
-          loadUploadHistory();
-        }, 400);
-      } else {
-        uploadProgressBox.style.display = 'none';
+      setTimeout(() => {
+        previewModal.classList.remove('active');
+        showToast(`Successfully uploaded ${uploadedRecords.length} separate documents!`, 'success');
+        capturedPhotos.forEach(p => URL.revokeObjectURL(p.dataUrl));
+        capturedPhotos = [];
+        loadUploadHistory();
         btnConfirmUpload.disabled = false;
-        showToast(data.message || 'Upload failed.', 'error');
-      }
-    } catch (err) {
+        if (btnAddPage) btnAddPage.disabled = false;
+        btnRetakePhoto.disabled = false;
+      }, 500);
+    } else {
       uploadProgressBox.style.display = 'none';
       btnConfirmUpload.disabled = false;
-      showToast('Network error during upload. Please retry.', 'error');
+      if (btnAddPage) btnAddPage.disabled = false;
+      btnRetakePhoto.disabled = false;
     }
   }
 

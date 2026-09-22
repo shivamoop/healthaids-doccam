@@ -252,16 +252,10 @@
           </svg>
         </button>
 
-        <h2 class="camera-action-title">Capture Document Photo</h2>
+        <h2 class="camera-action-title">Live Document Scanner</h2>
         <p class="camera-action-desc">
-          Click the button above to open the camera, snap your document photo, and automatically upload it named with your full name and today's date.
+          Click the button above to open the live camera and snap up to 3 separate pages. Pre-saved gallery uploads are disabled for security.
         </p>
-
-        <!-- Native file input fallback for restricted browsers -->
-        <input type="file" id="native-camera-input" accept="image/*" capture="environment" style="display: none;" />
-        <button type="button" class="file-fallback-btn" id="btn-file-fallback">
-          Choose from device / gallery fallback
-        </button>
       </section>
 
       <!-- RECENT UPLOADS & AUDIT LOG -->
@@ -297,8 +291,9 @@
         </svg>
       </button>
 
-      <div class="brand-badge" style="background: rgba(0,0,0,0.6); color: var(--brand-cyan);">
-        <span>Document Scanner</span>
+      <!-- Dynamic Multi-Photo Counter Badge -->
+      <div class="brand-badge" id="cam-counter-badge" style="background: rgba(0,0,0,0.65); color: var(--brand-cyan); border-color: var(--brand-cyan);">
+        <span id="cam-counter-text">Live Scanner · 0 of 3</span>
       </div>
 
       <button class="cam-ctl-btn" id="btn-switch-camera" title="Switch Front/Back Camera">
@@ -322,17 +317,26 @@
         <div class="corner-tr"></div>
         <div class="corner-bl"></div>
         <div class="corner-br"></div>
-        <div class="viewfinder-guide-text">Align document within the frame</div>
+        <div class="viewfinder-guide-text" id="viewfinder-guide-text">Align document within the frame</div>
       </div>
     </div>
 
-    <!-- Camera Bottom Bar (Shutter) -->
+    <!-- Camera Bottom Bar (Thumbnail Dock, Shutter, Done Button) -->
     <div class="camera-bottom-bar">
-      <div style="width: 48px;"></div>
-      <button class="shutter-btn" id="btn-shutter" title="Take Photo">
+      <!-- Live Thumbnail Dock -->
+      <div class="cam-thumb-dock" id="cam-thumb-dock"></div>
+
+      <!-- Shutter Trigger -->
+      <button class="shutter-btn" id="btn-shutter" title="Take Live Photo">
         <div class="shutter-btn-inner"></div>
       </button>
-      <div style="width: 48px;"></div>
+
+      <!-- Done / Review Button (Active once >= 1 photo is snapped) -->
+      <div class="cam-done-wrapper">
+        <button class="cam-done-btn" id="btn-cam-done" style="display: none;" title="Review Captured Photos">
+          Done (<span id="cam-done-count">0</span>) ✓
+        </button>
+      </div>
     </div>
   </div>
 
@@ -340,16 +344,23 @@
   <div class="preview-modal" id="preview-modal">
     <div class="preview-container">
       <div class="preview-card">
+        <!-- Multi-Page Thumbnail Strip -->
+        <div class="multi-thumb-bar" id="preview-thumb-bar" style="display: none;"></div>
+
         <div class="preview-img-box">
           <img id="preview-img" alt="Captured Document Preview" />
+          <div class="preview-page-pill" id="preview-active-page-pill">Page 1</div>
         </div>
+
         <div class="preview-details">
           <div class="preview-filename-badge">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
-            <span id="preview-filename-text">Rahul_Sharma_2026-09-18.jpg</span>
+            <div id="preview-filenames-list" style="display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem;">
+              <span id="preview-filename-text">Rahul_Sharma_2026-09-22.jpg</span>
+            </div>
           </div>
 
           <div class="preview-telemetry-list">
@@ -377,9 +388,12 @@
       </div>
 
       <div class="preview-actions">
+        <button class="btn-secondary" id="btn-add-page" style="display: none;">
+          <span>➕ Add Page</span>
+        </button>
         <button class="btn-secondary" id="btn-retake-photo">Retake</button>
         <button class="btn-primary" id="btn-confirm-upload">
-          <span>Upload Document</span>
+          <span id="upload-btn-label">Upload 1 Document</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
