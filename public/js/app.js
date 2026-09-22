@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentUser = null;
   let activeStream = null;
   let currentFacingMode = 'environment'; // default rear camera
+  const MAX_PHOTOS = 10;
   let capturedPhotos = []; // Array of { blob: Blob, dataUrl: string, id: string }
   let activePreviewIndex = 0;
   let deferredInstallPrompt = null;
@@ -519,8 +520,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function takeSnapshot() {
-    if (capturedPhotos.length >= 3) {
-      showToast('Maximum 3 photos reached. Tap Done to review.', 'info');
+    if (capturedPhotos.length >= MAX_PHOTOS) {
+      showToast(`Maximum ${MAX_PHOTOS} photos reached. Tap Done to review.`, 'info');
       return;
     }
 
@@ -547,14 +548,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       updateCamUI();
 
-      if (capturedPhotos.length === 3) {
-        showToast('All 3 pages captured! Opening review...', 'success');
+      if (capturedPhotos.length === MAX_PHOTOS) {
+        showToast(`All ${MAX_PHOTOS} pages captured! Opening review...`, 'success');
         setTimeout(() => {
           closeCameraModal();
           showPreviewModal();
         }, 350);
       } else {
-        showToast(`Captured Page ${capturedPhotos.length} of 3. Snap next or click Done.`, 'success');
+        showToast(`Captured Page ${capturedPhotos.length} of ${MAX_PHOTOS}. Snap next or click Done.`, 'success');
       }
     }, 'image/jpeg', 0.92);
   }
@@ -562,7 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateCamUI() {
     const count = capturedPhotos.length;
     if (camCounterText) {
-      camCounterText.textContent = `Live Scanner · ${count} of 3`;
+      camCounterText.textContent = `Live Scanner · ${count} of ${MAX_PHOTOS}`;
     }
 
     if (btnCamDone) {
@@ -591,10 +592,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         camThumbDock.appendChild(thumb);
       });
+      // Scroll to latest snapped thumbnail
+      camThumbDock.scrollLeft = camThumbDock.scrollWidth;
     }
 
     // Shutter state
-    if (count >= 3) {
+    if (count >= MAX_PHOTOS) {
       btnShutter.style.opacity = '0.5';
       btnShutter.style.pointerEvents = 'none';
     } else {
@@ -608,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
       URL.revokeObjectURL(capturedPhotos[idx].dataUrl);
       capturedPhotos.splice(idx, 1);
       updateCamUI();
-      showToast(`Page removed. ${capturedPhotos.length} of 3 remain.`, 'info');
+      showToast(`Page removed. ${capturedPhotos.length} of ${MAX_PHOTOS} remain.`, 'info');
     }
   }
 
@@ -701,12 +704,12 @@ document.addEventListener('DOMContentLoaded', () => {
     previewDevText.textContent = `${deviceDetails.os} · ${deviceDetails.browser} (${deviceDetails.screen})`;
     previewUserText.textContent = `${currentUser.fullName} (${currentUser.email})`;
 
-    // "Add Page" button visibility (available if < 3 photos)
+    // "Add Page" button visibility (available if < MAX_PHOTOS)
     if (btnAddPage) {
-      if (capturedPhotos.length < 3) {
+      if (capturedPhotos.length < MAX_PHOTOS) {
         btnAddPage.style.display = 'flex';
         const span = btnAddPage.querySelector('span');
-        if (span) span.textContent = `➕ Add Page (${capturedPhotos.length}/3)`;
+        if (span) span.textContent = `➕ Add Page (${capturedPhotos.length}/${MAX_PHOTOS})`;
       } else {
         btnAddPage.style.display = 'none';
       }
