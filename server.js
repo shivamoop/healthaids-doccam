@@ -236,7 +236,10 @@ app.post('/api/auth/google', async (req, res) => {
 
 // Helper to forward document image to n8n workflow for AI date verification & Drive upload
 async function forwardToN8n(payload) {
-  const n8nUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/healthaids-doccam';
+  // On Vercel, localhost:5678 is unreachable; fallback to public ngrok tunnel
+  const n8nUrl = process.env.N8N_WEBHOOK_URL || 
+    (process.env.VERCEL ? 'https://laurel-fraternal-subsonic.ngrok-free.dev/webhook/healthaids-doccam' : 'http://localhost:5678/webhook/healthaids-doccam');
+  console.log(`[n8n] Forwarding document to webhook: ${n8nUrl}`);
   try {
     const res = await fetch(n8nUrl, {
       method: 'POST',

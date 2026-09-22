@@ -11,5 +11,8 @@
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ]
+  ],
+  "env": {
+    "N8N_WEBHOOK_URL": "https://laurel-fraternal-subsonic.ngrok-free.dev/webhook/healthaids-doccam"
+  }
 }

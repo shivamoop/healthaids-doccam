@@ -63,6 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const camThumbDock = document.getElementById('cam-thumb-dock');
   const btnCamDone = document.getElementById('btn-cam-done');
   const camDoneCount = document.getElementById('cam-done-count');
+  const camProcessingOverlay = document.getElementById('cam-processing-overlay');
+  const camProcessingText = document.getElementById('cam-processing-text');
 
   // Preview Modal DOM
   const previewModal = document.getElementById('preview-modal');
@@ -525,9 +527,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {}
   }
 
-  function takeSnapshot() {
-    if (capturedPhotos.length >= MAX_PHOTOS) {
-      showToast(`Maximum ${MAX_PHOTOS} photos reached. Tap Done to review.`, 'info');
+  async function takeSnapshot() {
+    if (!currentUser) {
+      showToast('Please sign in with your @healthaids.in account.', 'error');
       return;
     }
 
@@ -539,29 +541,64 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = captureCanvas.getContext('2d');
     ctx.drawImage(cameraVideo, 0, 0, videoWidth, videoHeight);
 
-    captureCanvas.toBlob((blob) => {
+    captureCanvas.toBlob(async (blob) => {
       if (!blob) {
         showToast('Failed to capture live photo.', 'error');
         return;
       }
 
-      const dataUrl = URL.createObjectURL(blob);
-      capturedPhotos.push({
-        blob: blob,
-        dataUrl: dataUrl,
-        id: `page_${Date.now()}_${capturedPhotos.length + 1}`
-      });
+      // 1. Immediately show live processing overlay in viewfinder
+      if (camProcessingOverlay) {
+        camProcessingOverlay.style.display = 'flex';
+        if (camProcessingText) {
+          camProcessingText.textContent = 'Reading receipt & verifying date...';
+        }
+      }
+      btnShutter.disabled = true;
 
-      updateCamUI();
+      // 2. Prepare payload to trigger n8n workflow immediately
+      const formData = new FormData();
+      formData.append('email', currentUser.email);
+      formData.append('firstName', currentUser.firstName);
+      formData.append('lastName', currentUser.lastName);
 
-      if (capturedPhotos.length === MAX_PHOTOS) {
-        showToast(`All ${MAX_PHOTOS} pages captured! Opening review...`, 'success');
-        setTimeout(() => {
+      if (locationData.latitude) {
+        formData.append('latitude', locationData.latitude);
+        formData.append('longitude', locationData.longitude);
+        formData.append('accuracy', locationData.accuracy);
+        formData.append('locationAddress', locationData.address);
+        formData.append('locationTimestamp', locationData.timestamp || new Date().toISOString());
+      }
+
+      formData.append('deviceInfo', JSON.stringify(deviceDetails));
+      formData.append('documentPhoto', blob, `live_capture_${Date.now()}.jpg`);
+
+      try {
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (camProcessingOverlay) camProcessingOverlay.style.display = 'none';
+        btnShutter.disabled = false;
+
+        if (response.ok && data.success) {
+          // Success: Close camera and display standard confirmation
           closeCameraModal();
-          showPreviewModal();
-        }, 350);
-      } else {
-        showToast(`Captured Page ${capturedPhotos.length} of ${MAX_PHOTOS}. Snap next or click Done.`, 'success');
+          showToast('Your images has been succesfully uploaded', 'success');
+          loadUploadHistory();
+        } else if (response.status === 422 || data.status === 'REUPLOAD_REQUIRED') {
+          // Missing date: prompt user to re-upload properly
+          showReuploadModal(data.message);
+        } else {
+          showToast(`Upload failed: ${data.message || 'Verification rejected'}`, 'error');
+        }
+      } catch (err) {
+        if (camProcessingOverlay) camProcessingOverlay.style.display = 'none';
+        btnShutter.disabled = false;
+        showToast(`Upload error: ${err.message}`, 'error');
       }
     }, 'image/jpeg', 0.92);
   }
@@ -760,8 +797,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnReuploadRetake) {
       btnReuploadRetake.onclick = () => {
         reuploadModal.classList.remove('active');
-        previewModal.classList.remove('active');
-        openCamera(false);
+        if (previewModal) previewModal.classList.remove('active');
+        if (!cameraModal.classList.contains('active')) {
+          openCamera(false);
+        }
       };
     }
     if (btnReuploadCancel) {

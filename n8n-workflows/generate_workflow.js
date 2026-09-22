@@ -81,24 +81,32 @@ return [{
     {
       parameters: {
         method: "POST",
-        url: "https://api.groq.com/openai/v1/chat/completions",
+        url: "https://openrouter.ai/api/v1/chat/completions",
         sendHeaders: true,
         headerParameters: {
           parameters: [
             {
               name: "Authorization",
-              value: `Bearer ${process.env.GROQ_API_KEY || '{{ $env.GROQ_API_KEY }}'}`
+              value: `Bearer ${process.env.OPENROUTER_API_KEY || '{{ $env.OPENROUTER_API_KEY }}'}`
             },
             {
               name: "Content-Type",
               value: "application/json"
+            },
+            {
+              name: "HTTP-Referer",
+              value: "https://healthaids.in"
+            },
+            {
+              name: "X-Title",
+              value: "HealthAids DocCam"
             }
           ]
         },
         sendBody: true,
         specifyBody: "json",
         jsonBody: `={
-  "model": "qwen/qwen3.8-27b",
+  "model": "inclusionai/ling-3.0-flash-vl:free",
   "messages": [
     {
       "role": "user",
@@ -116,20 +124,19 @@ return [{
       ]
     }
   ],
-  "response_format": { "type": "json_object" },
   "max_tokens": 512,
   "temperature": 0.1
 }`,
         options: {}
       },
-      id: "http-call-groq-vision",
-      name: "Call Groq Vision",
+      id: "http-call-openrouter-vision",
+      name: "Call OpenRouter Vision",
       type: "n8n-nodes-base.httpRequest",
       typeVersion: 4.2,
       position: [80, 100],
       retryOnFail: true,
-      maxTries: 4,
-      waitBetweenTries: 3000
+      maxTries: 3,
+      waitBetweenTries: 2500
     },
     {
       parameters: {
@@ -391,14 +398,14 @@ return [{
       main: [
         [
           {
-            node: "Call Groq Vision",
+            node: "Call OpenRouter Vision",
             type: "main",
             index: 0
           }
         ]
       ]
     },
-    "Call Groq Vision": {
+    "Call OpenRouter Vision": {
       main: [
         [
           {
