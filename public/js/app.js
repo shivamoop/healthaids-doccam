@@ -591,14 +591,23 @@ document.addEventListener('DOMContentLoaded', () => {
           loadUploadHistory();
         } else if (response.status === 422 || data.status === 'REUPLOAD_REQUIRED') {
           // Missing date: prompt user to re-upload properly
-          showReuploadModal(data.message);
+          showReuploadModal(data.message, 'date_error');
+        } else if (data.status === 'DRIVE_FAILED' || response.status >= 500) {
+          // Drive upload failed: Ask user to re-upload image because something went wrong
+          showReuploadModal(
+            data.message || 'Something went wrong uploading to Google Drive. Please re-upload your image.',
+            'drive_error'
+          );
         } else {
-          showToast(`Upload failed: ${data.message || 'Verification rejected'}`, 'error');
+          showReuploadModal(
+            data.message || 'Something went wrong. Please re-upload your image.',
+            'drive_error'
+          );
         }
       } catch (err) {
         if (camProcessingOverlay) camProcessingOverlay.style.display = 'none';
         btnShutter.disabled = false;
-        showToast(`Upload error: ${err.message}`, 'error');
+        showReuploadModal(`Something went wrong: ${err.message}. Please re-upload your image.`, 'drive_error');
       }
     }, 'image/jpeg', 0.92);
   }
@@ -787,25 +796,114 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnConfirmUpload.addEventListener('click', performUpload);
 
-  function showReuploadModal(message) {
-    if (reuploadModalMsg) {
-      reuploadModalMsg.textContent = message || 'No date was found in the receipt image. Please re-upload the image properly with the date clearly visible.';
+  function showReuploadModal(message, type = 'date_error') {
+    const isDriveError = (type === 'drive_error');
+    const titleEl = document.getElementById('reupload-modal-title');
+    const subtitleEl = document.getElementById('reupload-modal-subtitle');
+    const msgEl = document.getElementById('reupload-modal-msg');
+    const tipsBox = document.getElementById('reupload-tips-box');
+    const iconBox = document.getElementById('reupload-modal-icon-box');
+    const sheetEl = document.getElementById('reupload-modal-sheet');
+    const retakeBtn = document.getElementById('btn-reupload-retake');
+    const retakeBtnText = document.getElementById('btn-reupload-retake-text');
+
+    if (isDriveError) {
+      if (sheetEl) sheetEl.style.borderTop = '4px solid #dc2626';
+      if (titleEl) {
+        titleEl.textContent = 'Something went wrong';
+        titleEl.style.color = '#dc2626';
+      }
+      if (subtitleEl) subtitleEl.textContent = 'Google Drive Upload Failed';
+      if (msgEl) {
+        msgEl.textContent = message || 'Something went wrong uploading to Google Drive. Please re-upload your image.';
+      }
+      if (iconBox) {
+        iconBox.style.background = 'rgba(220, 38, 38, 0.12)';
+        iconBox.innerHTML = `
+          <svg viewBox="0 0 24 24" width="26" height="26" stroke="#dc2626" fill="none" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>`;
+      }
+      if (tipsBox) {
+        tipsBox.style.background = '#fef2f2';
+        tipsBox.style.borderColor = '#fecaca';
+        tipsBox.innerHTML = `
+          <div style="font-weight: 600; font-size: 0.85rem; color: #991b1b; margin-bottom: 6px;">Next steps:</div>
+          <div style="font-size: 0.82rem; color: #7f1d1d; line-height: 1.45;">
+            • Tap <strong>Re-upload Image</strong> below to try uploading again<br>
+            • Ensure you have an active network connection<br>
+            • Your photo will be re-sent directly to Google Drive
+          </div>`;
+      }
+      if (retakeBtn) {
+        retakeBtn.style.background = '#dc2626';
+        retakeBtn.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.35)';
+      }
+      if (retakeBtnText) {
+        retakeBtnText.textContent = 'Re-upload Image';
+      }
+    } else {
+      if (sheetEl) sheetEl.style.borderTop = '4px solid #e65100';
+      if (titleEl) {
+        titleEl.textContent = 'Re-upload Required';
+        titleEl.style.color = '#e65100';
+      }
+      if (subtitleEl) subtitleEl.textContent = 'Receipt Verification Alert';
+      if (msgEl) {
+        msgEl.textContent = message || 'No date was found in the receipt image. Please re-upload the image properly with the date clearly visible.';
+      }
+      if (iconBox) {
+        iconBox.style.background = 'rgba(230, 81, 0, 0.12)';
+        iconBox.innerHTML = `
+          <svg viewBox="0 0 24 24" width="26" height="26" stroke="#e65100" fill="none" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>`;
+      }
+      if (tipsBox) {
+        tipsBox.style.background = '#fff8f1';
+        tipsBox.style.borderColor = '#ffe0b2';
+        tipsBox.innerHTML = `
+          <div style="font-weight: 600; font-size: 0.85rem; color: #b74700; margin-bottom: 6px;">How to capture properly:</div>
+          <div style="font-size: 0.82rem; color: #7c2d12; line-height: 1.45;">
+            • Make sure the receipt/bill date is in sharp focus<br>
+            • Avoid strong glare, shadows, or reflective light<br>
+            • Keep entire receipt edges inside the camera frame
+          </div>`;
+      }
+      if (retakeBtn) {
+        retakeBtn.style.background = '#e65100';
+        retakeBtn.style.boxShadow = '0 4px 12px rgba(230, 81, 0, 0.3)';
+      }
+      if (retakeBtnText) {
+        retakeBtnText.textContent = 'Re-upload Image';
+      }
     }
+
     if (reuploadModal) {
       reuploadModal.classList.add('active');
     }
+
     if (btnReuploadRetake) {
       btnReuploadRetake.onclick = () => {
         reuploadModal.classList.remove('active');
         if (previewModal) previewModal.classList.remove('active');
         if (!cameraModal.classList.contains('active')) {
           openCamera(false);
+        } else {
+          if (camProcessingOverlay) camProcessingOverlay.style.display = 'none';
+          btnShutter.disabled = false;
         }
       };
     }
     if (btnReuploadCancel) {
       btnReuploadCancel.onclick = () => {
         reuploadModal.classList.remove('active');
+        if (camProcessingOverlay) camProcessingOverlay.style.display = 'none';
+        btnShutter.disabled = false;
       };
     }
   }
@@ -855,23 +953,51 @@ document.addEventListener('DOMContentLoaded', () => {
           body: formData
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (response.ok && data.success) {
           uploadedRecords.push(data.record);
         } else if (response.status === 422 || data.status === 'REUPLOAD_REQUIRED') {
           hasError = true;
           uploadProgressBox.style.display = 'none';
-          showReuploadModal(data.message);
+          btnConfirmUpload.disabled = false;
+          if (btnAddPage) btnAddPage.disabled = false;
+          btnRetakePhoto.disabled = false;
+          showReuploadModal(data.message, 'date_error');
+          break;
+        } else if (data.status === 'DRIVE_FAILED' || response.status >= 500) {
+          hasError = true;
+          uploadProgressBox.style.display = 'none';
+          btnConfirmUpload.disabled = false;
+          if (btnAddPage) btnAddPage.disabled = false;
+          btnRetakePhoto.disabled = false;
+          showReuploadModal(
+            data.message || 'Something went wrong uploading to Google Drive. Please re-upload your image.',
+            'drive_error'
+          );
           break;
         } else {
           hasError = true;
-          showToast(`Error uploading document ${i + 1}: ${data.message || 'Upload rejected'}`, 'error');
+          uploadProgressBox.style.display = 'none';
+          btnConfirmUpload.disabled = false;
+          if (btnAddPage) btnAddPage.disabled = false;
+          btnRetakePhoto.disabled = false;
+          showReuploadModal(
+            data.message || 'Something went wrong. Please re-upload your image.',
+            'drive_error'
+          );
           break;
         }
       } catch (err) {
         hasError = true;
-        showToast(`Network error on document ${i + 1}: ${err.message}`, 'error');
+        uploadProgressBox.style.display = 'none';
+        btnConfirmUpload.disabled = false;
+        if (btnAddPage) btnAddPage.disabled = false;
+        btnRetakePhoto.disabled = false;
+        showReuploadModal(
+          `Something went wrong: ${err.message}. Please re-upload your image.`,
+          'drive_error'
+        );
         break;
       }
     }

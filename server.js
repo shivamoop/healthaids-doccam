@@ -362,6 +362,21 @@ app.post('/api/upload', upload.single('documentPhoto'), async (req, res) => {
       });
     }
 
+    // If Google Drive upload node failed or workflow returned an error
+    if (!n8nResult.ok || n8nResult.status >= 500 || n8nResult.data?.status === 'DRIVE_FAILED' || n8nResult.data?.success === false) {
+      try {
+        if (fs.existsSync(targetFilePath)) fs.unlinkSync(targetFilePath);
+      } catch (e) {}
+      const driveErrMsg = n8nResult.data?.message || 'Something went wrong uploading to Google Drive. Please re-upload your image.';
+      console.warn(`[Upload] Drive upload failed: ${driveErrMsg}`);
+      return res.status(500).json({
+        success: false,
+        status: 'DRIVE_FAILED',
+        message: driveErrMsg,
+        filename: filename
+      });
+    }
+
     const record = {
       id: `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       filename: filename,

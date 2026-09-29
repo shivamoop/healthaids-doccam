@@ -1,7 +1,5 @@
 [
   {
-    "id": "hAidsDocCam2026",
-    "name": "HealthAids DocCam Expense Processor",
     "nodes": [
       {
         "parameters": {
@@ -16,7 +14,7 @@
         "typeVersion": 2,
         "position": [
           -400,
-          100
+          96
         ],
         "webhookId": "healthaids-doccam"
       },
@@ -29,8 +27,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          -160,
-          100
+          -176,
+          96
         ]
       },
       {
@@ -42,7 +40,7 @@
             "parameters": [
               {
                 "name": "Authorization",
-                "value": "Bearer {{ $env.OPENROUTER_API_KEY }}"
+                "value": "=Bearer {{ $env.OPENROUTER_API_KEY || '' }}"
               },
               {
                 "name": "Content-Type",
@@ -60,7 +58,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"model\": \"inclusionai/ling-3.0-flash-vl:free\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": {{ JSON.stringify($json.prompt) }}\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": {{ JSON.stringify($json.imageUrl) }}\n          }\n        }\n      ]\n    }\n  ],\n  \"max_tokens\": 512,\n  \"temperature\": 0.1\n}",
+          "jsonBody": "={\n  \"model\": \"openrouter/free\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": {{ JSON.stringify($json.prompt) }}\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": {{ JSON.stringify($json.imageUrl) }}\n          }\n        }\n      ]\n    }\n  ],\n  \"max_tokens\": 512,\n  \"temperature\": 0.1\n}",
           "options": {}
         },
         "id": "http-call-openrouter-vision",
@@ -68,12 +66,13 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          80,
-          100
+          48,
+          96
         ],
         "retryOnFail": true,
         "maxTries": 3,
-        "waitBetweenTries": 2500
+        "waitBetweenTries": 2500,
+        "onError": "continueRegularOutput"
       },
       {
         "parameters": {
@@ -84,24 +83,26 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          320,
-          100
-        ]
+          272,
+          96
+        ],
+        "onError": "continueRegularOutput"
       },
       {
         "parameters": {
           "mode": "expression",
-          "output": "={{ $json.branchIndex }}",
-          "numberOutputs": 3
+          "numberOutputs": 3,
+          "output": "={{ $json.branchIndex }}"
         },
         "id": "switch-route-by-date",
         "name": "Route by Expense Date",
         "type": "n8n-nodes-base.switch",
         "typeVersion": 3.2,
         "position": [
-          560,
-          100
-        ]
+          496,
+          80
+        ],
+        "onError": "continueRegularOutput"
       },
       {
         "parameters": {
@@ -116,24 +117,26 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.1,
         "position": [
-          840,
-          -100
+          720,
+          -96
         ]
       },
       {
         "parameters": {
-          "authentication": "oAuth2",
-          "resource": "file",
-          "operation": "upload",
-          "inputDataFieldName": "data",
           "name": "={{ $json.fileName }}",
           "driveId": {
+            "__rl": true,
+            "value": "My Drive",
             "mode": "list",
-            "value": "My Drive"
+            "cachedResultName": "My Drive",
+            "cachedResultUrl": "https://drive.google.com/drive/my-drive"
           },
           "folderId": {
+            "__rl": true,
+            "value": "1myTH9l79qM_C3uupl7pvmPcG4CB9juNj",
             "mode": "list",
-            "value": "root"
+            "cachedResultName": "Expense submission",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1myTH9l79qM_C3uupl7pvmPcG4CB9juNj"
           },
           "options": {}
         },
@@ -142,22 +145,24 @@
         "type": "n8n-nodes-base.googleDrive",
         "typeVersion": 3,
         "position": [
-          840,
-          100
+          720,
+          96
         ],
+        "retryOnFail": true,
         "credentials": {
           "googleDriveOAuth2Api": {
-            "id": "9ShfEgfgrB9lm6hh",
-            "name": "Google Drive account"
+            "id": "A6i00cqS6rbSkQtY",
+            "name": "Google Drive account 2"
           }
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       {
         "parameters": {
           "respondWith": "json",
-          "responseBody": "={\n  \"success\": true,\n  \"status\": \"SUCCESS\",\n  \"message\": \"Your images has been succesfully uploaded\",\n  \"expenseDate\": {{ JSON.stringify($('Evaluate Date & Prepare File').item.json.expenseDate) }},\n  \"isToday\": true,\n  \"fileId\": {{ JSON.stringify($json.id) }}\n}",
+          "responseBody": "={{ JSON.stringify($json) }}",
           "options": {
-            "responseCode": 200
+            "responseCode": "={{ $json.success ? 200 : 500 }}"
           }
         },
         "id": "webhook-respond-today",
@@ -165,24 +170,26 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.1,
         "position": [
-          1100,
-          100
+          1050,
+          96
         ]
       },
       {
         "parameters": {
-          "authentication": "oAuth2",
-          "resource": "file",
-          "operation": "upload",
-          "inputDataFieldName": "data",
           "name": "={{ $json.fileName }}",
           "driveId": {
+            "__rl": true,
+            "value": "My Drive",
             "mode": "list",
-            "value": "My Drive"
+            "cachedResultName": "My Drive",
+            "cachedResultUrl": "https://drive.google.com/drive/my-drive"
           },
           "folderId": {
+            "__rl": true,
+            "value": "1myTH9l79qM_C3uupl7pvmPcG4CB9juNj",
             "mode": "list",
-            "value": "root"
+            "cachedResultName": "Expense submission",
+            "cachedResultUrl": "https://drive.google.com/drive/folders/1myTH9l79qM_C3uupl7pvmPcG4CB9juNj"
           },
           "options": {}
         },
@@ -191,15 +198,17 @@
         "type": "n8n-nodes-base.googleDrive",
         "typeVersion": 3,
         "position": [
-          840,
-          300
+          720,
+          288
         ],
+        "retryOnFail": true,
         "credentials": {
           "googleDriveOAuth2Api": {
-            "id": "9ShfEgfgrB9lm6hh",
-            "name": "Google Drive account"
+            "id": "A6i00cqS6rbSkQtY",
+            "name": "Google Drive account 2"
           }
-        }
+        },
+        "onError": "continueRegularOutput"
       },
       {
         "parameters": {
@@ -216,9 +225,10 @@
         "type": "n8n-nodes-base.gmail",
         "typeVersion": 2.1,
         "position": [
-          1080,
-          300
+          1200,
+          250
         ],
+        "webhookId": "24352ba9-d1d5-4779-af76-3305bc3a884a",
         "credentials": {
           "gmailOAuth2": {
             "id": "yixMNuepWQtzlJbH",
@@ -240,8 +250,226 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.1,
         "position": [
-          1320,
-          300
+          1380,
+          250
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1xjbyOw2IunF6i6CUIpgAerXbhrs2tAx3-1uXZFLU364",
+            "mode": "list",
+            "cachedResultName": "October Expenses Record",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xjbyOw2IunF6i6CUIpgAerXbhrs2tAx3-1uXZFLU364/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "Sheet1",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1xjbyOw2IunF6i6CUIpgAerXbhrs2tAx3-1uXZFLU364/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "fileName": "={{ $json.fileName }}",
+              "userEmail": "={{ $json.userEmail }}",
+              "mimeType": "={{ $json.mimeType }}",
+              "fullName": "={{ $json.fullName }}",
+              "location": "={{ $json.location }}",
+              "deviceInfo": "={{ $json.deviceInfo }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "fileName",
+                "displayName": "fileName",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "mimeType",
+                "displayName": "mimeType",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "userEmail",
+                "displayName": "userEmail",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "firstName",
+                "displayName": "firstName",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "lastName",
+                "displayName": "lastName",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "fullName",
+                "displayName": "fullName",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "location",
+                "displayName": "location",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "deviceInfo",
+                "displayName": "deviceInfo",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "prompt",
+                "displayName": "prompt",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "imageUrl",
+                "displayName": "imageUrl",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              },
+              {
+                "id": "fileBase64",
+                "displayName": "fileBase64",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          64,
+          240
+        ],
+        "id": "84d1c2e8-c1f5-45d7-b86e-f1588dbf2cdb",
+        "name": "Append row in sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "W5KgYJdNfrTb7fKP",
+            "name": "healthaids"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.item.json;\nconst isError = Boolean(item.error || !item.id);\nreturn [{\n  json: {\n    success: !isError,\n    status: isError ? \"DRIVE_FAILED\" : \"SUCCESS\",\n    message: isError ? \"Something went wrong uploading to Google Drive. Please re-upload your image.\" : \"Your images has been succesfully uploaded\",\n    expenseDate: $('Evaluate Date & Prepare File').item.json.expenseDate,\n    isToday: true,\n    fileId: item.id || null,\n    error: isError ? (item.error?.message || String(item.error || \"Google Drive upload failed\")) : null\n  }\n}];"
+        },
+        "id": "code-check-drive-today",
+        "name": "Check Drive Upload (Today)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          870,
+          96
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.item.json;\nconst isError = Boolean(item.error || !item.id);\nreturn [{\n  json: {\n    success: !isError,\n    status: isError ? \"DRIVE_FAILED\" : \"PAST_EXPENSE\",\n    message: isError ? \"Something went wrong uploading to Google Drive. Please re-upload your image.\" : \"Your images has been succesfully uploaded\",\n    expenseDate: $('Evaluate Date & Prepare File').item.json.expenseDate,\n    isToday: false,\n    fileId: item.id || null,\n    error: isError ? (item.error?.message || String(item.error || \"Google Drive upload failed\")) : null\n  }\n}];"
+        },
+        "id": "code-check-drive-past",
+        "name": "Check Drive Upload (Past)",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          870,
+          288
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "expression",
+          "output": "={{ $json.success ? 0 : 1 }}",
+          "numberOutputs": 2
+        },
+        "id": "switch-drive-past-result",
+        "name": "Switch Drive Past Result",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3.2,
+        "position": [
+          1020,
+          288
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": 500
+          }
+        },
+        "id": "webhook-respond-drive-failed-past",
+        "name": "Respond Drive Failed (Past)",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1200,
+          390
         ]
       }
     ],
@@ -262,6 +490,11 @@
           [
             {
               "node": "Call OpenRouter Vision",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Append row in sheet",
               "type": "main",
               "index": 0
             }
@@ -319,7 +552,7 @@
         "main": [
           [
             {
-              "node": "Respond Today Success",
+              "node": "Check Drive Upload (Today)",
               "type": "main",
               "index": 0
             }
@@ -330,7 +563,7 @@
         "main": [
           [
             {
-              "node": "Gmail Alert to Agent",
+              "node": "Check Drive Upload (Past)",
               "type": "main",
               "index": 0
             }
@@ -347,11 +580,47 @@
             }
           ]
         ]
+      },
+      "Check Drive Upload (Today)": {
+        "main": [
+          [
+            {
+              "node": "Respond Today Success",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Check Drive Upload (Past)": {
+        "main": [
+          [
+            {
+              "node": "Switch Drive Past Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch Drive Past Result": {
+        "main": [
+          [
+            {
+              "node": "Gmail Alert to Agent",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Respond Drive Failed (Past)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
-    },
-    "settings": {
-      "executionOrder": "v1"
-    },
-    "active": true
+    }
   }
 ]
