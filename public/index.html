@@ -282,9 +282,12 @@
         </svg>
       </button>
 
-      <!-- Dynamic Multi-Photo Counter Badge -->
-      <div class="brand-badge" id="cam-counter-badge" style="background: rgba(0,0,0,0.65); color: var(--brand-cyan); border-color: var(--brand-cyan);">
-        <span id="cam-counter-text">Live Scanner · 0 of 10</span>
+      <!-- Dynamic Multi-Photo Counter Badge with Company Logo -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <img src="/icons/grh_logo.png" alt="GRH Logo" style="height: 22px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));" />
+        <div class="brand-badge" id="cam-counter-badge" style="background: rgba(0,0,0,0.65); color: var(--brand-cyan); border-color: var(--brand-cyan);">
+          <span id="cam-counter-text">Live Scanner · 0 of 10</span>
+        </div>
       </div>
 
       <button class="cam-ctl-btn" id="btn-switch-camera" title="Switch Front/Back Camera">
@@ -371,7 +374,7 @@
             </div>
             <div class="preview-telemetry-item">
               <span>👤 User:</span>
-              <strong id="preview-user-text">Rahul Sharma (rahul.sharma@healthaids.in)</strong>
+              <strong id="preview-user-text">Staff Member</strong>
             </div>
           </div>
 

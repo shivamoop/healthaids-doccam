@@ -82,7 +82,7 @@ function generateFileName(firstName, lastName, extension = '.jpg') {
 
   if (!cleanFirst && !cleanLast) {
     cleanFirst = 'User';
-    cleanLast = 'HealthAids';
+    cleanLast = 'GRH';
   } else if (!cleanFirst) {
     cleanFirst = cleanLast;
     cleanLast = 'User';
