@@ -159,23 +159,6 @@
       },
       {
         "parameters": {
-          "respondWith": "json",
-          "responseBody": "={{ JSON.stringify($json) }}",
-          "options": {
-            "responseCode": "={{ $json.success ? 200 : 500 }}"
-          }
-        },
-        "id": "webhook-respond-today",
-        "name": "Respond Today Success",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          1050,
-          96
-        ]
-      },
-      {
-        "parameters": {
           "name": "={{ $json.fileName }}",
           "driveId": {
             "__rl": true,
@@ -213,11 +196,18 @@
       {
         "parameters": {
           "sendTo": "={{ $('Evaluate Date & Prepare File').item.json.userEmail }}",
-          "subject": "={{ '⚠️ HealthAids Alert: Past Expense Image Uploaded (' + $('Evaluate Date & Prepare File').item.json.expenseDate + ')' }}",
+          "subject": "={{ '⚠️ GRH DocCam Alert: Past Expense Image Uploaded (' + $('Evaluate Date & Prepare File').item.json.expenseDate + ')' }}",
           "emailType": "text",
-          "message": "={{ 'Hello ' + $('Evaluate Date & Prepare File').item.json.fullName + ',\\n\\nNotice: The expense document you uploaded (' + $('Evaluate Date & Prepare File').item.json.fileName + ') has an expense date of ' + $('Evaluate Date & Prepare File').item.json.expenseDate + ', which is before today (' + $('Evaluate Date & Prepare File').item.json.todayDate + ').\\n\\nThe file has been saved to your Google Drive, but flagged as a past expense.\\n\\nThank you,\\nHealthAids Automated Expense System' }}",
+          "message": "={{ 'Hello ' + $('Evaluate Date & Prepare File').item.json.fullName + ',\\n\\nNotice: The expense document you uploaded (' + $('Evaluate Date & Prepare File').item.json.fileName + ') has an expense date of ' + $('Evaluate Date & Prepare File').item.json.expenseDate + ', which is before today (' + $('Evaluate Date & Prepare File').item.json.todayDate + ').\\n\\nThe file has been saved to your Google Drive, but flagged as a past expense.\\n\\nPlease find the uploaded receipt image attached to this email.\\n\\nThank you,\\nGRH DocCam Automated Expense System' }}",
           "options": {
-            "appendAttribution": false
+            "appendAttribution": false,
+            "attachmentsUi": {
+              "attachmentsBinary": [
+                {
+                  "property": "data"
+                }
+              ]
+            }
           }
         },
         "id": "gmail-alert-past",
@@ -225,8 +215,8 @@
         "type": "n8n-nodes-base.gmail",
         "typeVersion": 2.1,
         "position": [
-          1200,
-          250
+          1180,
+          240
         ],
         "webhookId": "24352ba9-d1d5-4779-af76-3305bc3a884a",
         "credentials": {
@@ -236,23 +226,6 @@
           }
         },
         "continueOnFail": true
-      },
-      {
-        "parameters": {
-          "respondWith": "json",
-          "responseBody": "={\n  \"success\": true,\n  \"status\": \"PAST_EXPENSE\",\n  \"message\": \"Your images has been succesfully uploaded\",\n  \"expenseDate\": {{ JSON.stringify($('Evaluate Date & Prepare File').item.json.expenseDate) }},\n  \"isToday\": false,\n  \"alertSent\": true\n}",
-          "options": {
-            "responseCode": 200
-          }
-        },
-        "id": "webhook-respond-past",
-        "name": "Respond Past Success",
-        "type": "n8n-nodes-base.respondToWebhook",
-        "typeVersion": 1.1,
-        "position": [
-          1380,
-          250
-        ]
       },
       {
         "parameters": {
@@ -429,10 +402,27 @@
       },
       {
         "parameters": {
-          "jsCode": "const item = $input.item.json;\nconst isError = Boolean(item.error || !item.id);\nreturn [{\n  json: {\n    success: !isError,\n    status: isError ? \"DRIVE_FAILED\" : \"PAST_EXPENSE\",\n    message: isError ? \"Something went wrong uploading to Google Drive. Please re-upload your image.\" : \"Your images has been succesfully uploaded\",\n    expenseDate: $('Evaluate Date & Prepare File').item.json.expenseDate,\n    isToday: false,\n    fileId: item.id || null,\n    error: isError ? (item.error?.message || String(item.error || \"Google Drive upload failed\")) : null\n  }\n}];"
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify($json) }}",
+          "options": {
+            "responseCode": "={{ $json.success ? 200 : 500 }}"
+          }
         },
-        "id": "code-check-drive-past",
-        "name": "Check Drive Upload (Past)",
+        "id": "webhook-respond-today",
+        "name": "Respond Today Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1050,
+          96
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const item = $input.item.json;\nconst isError = Boolean(item.error || !item.id);\n\nlet binaryData = $('Evaluate Date & Prepare File').item.binary?.data;\nif (!binaryData) {\n  try {\n    const orig = $('Prepare Groq Payload').item.json;\n    const binaryBuffer = Buffer.from(orig.fileBase64, 'base64');\n    binaryData = await this.helpers.prepareBinaryData(\n      binaryBuffer,\n      orig.fileName,\n      orig.mimeType\n    );\n  } catch (e) {}\n}\n\nconst returnItem = {\n  json: {\n    success: !isError,\n    status: isError ? \"DRIVE_FAILED\" : \"PAST_EXPENSE\",\n    message: isError ? \"Something went wrong uploading to Google Drive. Please re-upload your image.\" : \"Your images has been succesfully uploaded\",\n    expenseDate: $('Evaluate Date & Prepare File').item.json.expenseDate,\n    isToday: false,\n    fileId: item.id || null,\n    error: isError ? (item.error?.message || String(item.error || \"Google Drive upload failed\")) : null\n  },\n  binary: {\n    data: binaryData\n  }\n};\n\nreturn [returnItem];"
+        },
+        "id": "code-prep-email-attachment",
+        "name": "Prepare Email Attachment",
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
@@ -446,13 +436,30 @@
           "output": "={{ $json.success ? 0 : 1 }}",
           "numberOutputs": 2
         },
-        "id": "switch-drive-past-result",
-        "name": "Switch Drive Past Result",
+        "id": "switch-past-drive-result",
+        "name": "Switch Past Drive Result",
         "type": "n8n-nodes-base.switch",
         "typeVersion": 3.2,
         "position": [
-          1020,
+          1030,
           288
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\n  \"success\": true,\n  \"status\": \"PAST_EXPENSE\",\n  \"message\": \"Your images has been succesfully uploaded\",\n  \"expenseDate\": {{ JSON.stringify($('Evaluate Date & Prepare File').item.json.expenseDate) }},\n  \"isToday\": false,\n  \"alertSent\": true,\n  \"fileAttached\": true\n}",
+          "options": {
+            "responseCode": 200
+          }
+        },
+        "id": "webhook-respond-past",
+        "name": "Respond Past Success",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1360,
+          240
         ]
       },
       {
@@ -469,7 +476,7 @@
         "typeVersion": 1.1,
         "position": [
           1200,
-          390
+          380
         ]
       }
     ],
@@ -563,7 +570,7 @@
         "main": [
           [
             {
-              "node": "Check Drive Upload (Past)",
+              "node": "Prepare Email Attachment",
               "type": "main",
               "index": 0
             }
@@ -592,18 +599,18 @@
           ]
         ]
       },
-      "Check Drive Upload (Past)": {
+      "Prepare Email Attachment": {
         "main": [
           [
             {
-              "node": "Switch Drive Past Result",
+              "node": "Switch Past Drive Result",
               "type": "main",
               "index": 0
             }
           ]
         ]
       },
-      "Switch Drive Past Result": {
+      "Switch Past Drive Result": {
         "main": [
           [
             {
